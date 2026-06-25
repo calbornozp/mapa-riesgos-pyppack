@@ -1,662 +1,626 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mapa de Riesgos â PyP Pack | Bodega/Planta Santiago</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mapa de Riesgos – PyP Pack | Bodega Santiago 2026-06</title>
 <style>
-  :root {
-    --critico: #c0392b;
-    --alto: #e67e22;
-    --medio: #f1c40f;
-    --bajo: #27ae60;
-    --sin-dato: #95a5a6;
-    --bg: #f5f6fa;
-    --card: #ffffff;
-    --text: #2c3e50;
-    --border: #dde1e7;
-    --header-bg: #1a252f;
-  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
-
-  .header { background: var(--header-bg); color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-  .header h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.3px; }
-  .header .meta { font-size: 11px; color: #bdc3c7; margin-top: 3px; }
-  .badge-borrador { background: #e74c3c; color: #fff; font-size: 10px; padding: 3px 8px; border-radius: 3px; font-weight: 700; letter-spacing: 1px; }
-
-  .main { display: grid; grid-template-columns: 1fr 340px; gap: 16px; padding: 16px; }
-  @media (max-width: 960px) { .main { grid-template-columns: 1fr; } }
-
-  .plano-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-  .plano-wrap h2 { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
-
-  svg#plano { width: 100%; height: auto; display: block; }
-  .zona { cursor: pointer; transition: opacity 0.15s; }
-  .zona:hover { opacity: 0.82; }
-  .zona.selected { stroke-width: 3 !important; stroke: #2c3e50 !important; }
-  .zona-label { font-size: 10px; font-weight: 700; fill: #fff; text-anchor: middle; pointer-events: none; }
-  .zona-sublabel { font-size: 8px; fill: rgba(255,255,255,0.9); text-anchor: middle; pointer-events: none; }
-  .zona-badge { font-size: 8.5px; font-weight: 700; fill: #fff; text-anchor: middle; pointer-events: none; }
-
-  .side-panel { display: flex; flex-direction: column; gap: 14px; }
-
-  .legend { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-  .legend h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
-  .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; }
-  .legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
-  .legend-range { font-size: 10px; color: #7f8c8d; margin-left: auto; }
-
-  .stats { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-  .stats h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
-  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .stat-card { border-radius: 6px; padding: 10px 12px; }
-  .stat-card .num { font-size: 22px; font-weight: 800; color: #fff; line-height: 1; }
-  .stat-card .lbl { font-size: 10px; color: rgba(255,255,255,0.85); margin-top: 2px; }
-  .sc-critico { background: var(--critico); }
-  .sc-alto { background: var(--alto); }
-  .sc-medio { background: #d4ac0d; }
-  .sc-bajo { background: var(--bajo); }
-
-  .zona-detail { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; max-height: 420px; overflow-y: auto; }
-  .zona-detail h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
-  .zona-detail .hint { font-size: 11px; color: #7f8c8d; font-style: italic; }
-  .risk-card { border-left: 4px solid #dde; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #fafbfc; }
-  .risk-card .risk-num { font-size: 9px; font-weight: 700; color: #7f8c8d; text-transform: uppercase; }
-  .risk-card .risk-title { font-size: 12px; font-weight: 700; margin: 2px 0 4px; }
-  .risk-card .risk-meta { font-size: 10px; color: #555; line-height: 1.5; }
-  .risk-card .risk-control { font-size: 10px; color: #c0392b; margin-top: 4px; font-style: italic; }
-  .risk-card .risk-action { font-size: 10px; color: #1a6dad; margin-top: 3px; }
-  .nivel-chip { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 9px; font-weight: 700; color: #fff; margin-left: 6px; }
-  .nc-critico { background: var(--critico); }
-  .nc-alto { background: var(--alto); }
-  .nc-medio { background: #d4ac0d; }
-  .nc-bajo { background: var(--bajo); }
-
-  .tabla-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 0 16px 16px; }
-  .tabla-wrap h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
-  .filtros { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-  .filtro-btn { padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 11px; font-weight: 600; transition: all 0.15s; }
-  .filtro-btn:hover { background: #eaf0fb; }
-  .filtro-btn.active { color: #fff; border-color: transparent; }
-  .fb-todos.active { background: #2c3e50; }
-  .fb-critico.active { background: var(--critico); }
-  .fb-alto.active { background: var(--alto); }
-  .fb-medio.active { background: #d4ac0d; }
-  .fb-bajo.active { background: var(--bajo); }
-
-  table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  th { background: #2c3e50; color: #fff; padding: 7px 8px; text-align: left; font-weight: 600; white-space: nowrap; }
-  td { padding: 6px 8px; border-bottom: 1px solid #eef0f3; vertical-align: top; }
-  tr:hover td { background: #f0f4ff; }
-  .nivel-cell { text-align: center; }
-  .nivel-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 9px; font-weight: 700; color: #fff; }
-  .nb-critico { background: var(--critico); }
-  .nb-alto { background: var(--alto); }
-  .nb-medio { background: #d4ac0d; }
-  .nb-bajo { background: var(--bajo); }
-  .observ-rojo { color: var(--critico); font-weight: 700; font-size: 10px; }
-  .observ-normal { font-size: 10px; color: #777; }
-
-  .footer { background: var(--header-bg); color: #aaa; font-size: 10px; padding: 10px 24px; text-align: center; margin-top: 8px; }
-  .tooltip { position: fixed; background: rgba(0,0,0,0.88); color: #fff; padding: 6px 10px; border-radius: 5px; font-size: 11px; pointer-events: none; z-index: 999; max-width: 220px; display: none; line-height: 1.4; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #f0f2f5; color: #1f2933; }
+  .header { background: #1e3a5f; color: #fff; padding: 18px 28px 14px; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 20px; font-weight: 700; line-height: 1.3; }
+  .header .meta { font-size: 12px; opacity: .75; margin-top: 4px; }
+  .badge { background: #e53e3e; color:#fff; border-radius:4px; padding:3px 10px; font-size:13px; font-weight:700; white-space:nowrap; }
+  .filters { background:#fff; border-bottom:1px solid #dde3ec; padding:10px 24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .filters label { font-size:13px; font-weight:600; color:#334155; }
+  .filters select, .filters input[type=search] { font-size:13px; padding:5px 10px; border:1px solid #c5cdd8; border-radius:5px; outline:none; }
+  .filters .reset-btn { font-size:12px; color:#1e3a5f; cursor:pointer; text-decoration:underline; background:none; border:none; padding:0; }
+  .layout { display:flex; gap:0; min-height: calc(100vh - 120px); }
+  .map-panel { flex:1; padding:20px; overflow:auto; }
+  .table-panel { width:560px; background:#fff; border-left:1px solid #dde3ec; overflow:auto; display:flex; flex-direction:column; }
+  .map-wrapper { background:#fff; border-radius:8px; box-shadow:0 1px 6px rgba(0,0,0,.12); padding:10px; display:inline-block; min-width:100%; }
+  .map-wrapper svg { max-width:100%; display:block; }
+  .risk-symbol { cursor:pointer; transition: transform 0.15s; transform-origin: center; }
+  .risk-symbol:hover { transform: scale(1.2); }
+  .risk-symbol.highlighted { filter: drop-shadow(0 0 6px rgba(0,0,0,0.7)); transform: scale(1.25); }
+  #tooltip { position:fixed; background:#1f2933; color:#fff; padding:10px 14px; border-radius:7px; font-size:13px; max-width:280px; pointer-events:none; z-index:9999; display:none; line-height:1.5; }
+  #tooltip strong { display:block; font-size:14px; margin-bottom:4px; }
+  #tooltip .tip-level { display:inline-block; padding:2px 8px; border-radius:3px; font-weight:700; font-size:12px; margin-bottom:6px; }
+  .table-header { padding:12px 16px; background:#f8fafc; border-bottom:1px solid #e2e8f0; font-weight:700; font-size:14px; color:#1e3a5f; }
+  .table-panel table { width:100%; border-collapse:collapse; font-size:12px; }
+  .table-panel th { background:#1e3a5f; color:#fff; padding:8px 10px; text-align:left; position:sticky; top:0; z-index:10; white-space:nowrap; }
+  .table-panel td { padding:7px 10px; border-bottom:1px solid #edf2f7; vertical-align:top; }
+  .table-panel tr:hover td { background:#f0f5ff; }
+  .table-panel tr.hidden { display:none; }
+  .table-panel tr.row-highlighted td { background:#fff3cd !important; }
+  .lvl-badge { display:inline-block; padding:2px 8px; border-radius:3px; font-weight:700; font-size:11px; color:#fff; white-space:nowrap; }
+  .lvl-C { background:#c0392b; } .lvl-A { background:#e67e22; }
+  .lvl-M { background:#f1c40f; color:#333; } .lvl-B { background:#27ae60; }
+  .legend-section { background:#fff; margin:16px 20px 0; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.1); padding:14px 18px; }
+  .legend-section h3 { font-size:14px; font-weight:700; color:#1e3a5f; margin-bottom:10px; }
+  .legend-colors { display:flex; gap:8px; flex-wrap:wrap; }
+  .legend-color { display:flex; align-items:center; gap:5px; font-size:12px; }
+  .legend-dot { width:14px; height:14px; border-radius:50%; display:inline-block; }
+  .footer-note { font-size:11px; color:#64748b; padding:14px 20px 20px; line-height:1.6; }
 </style>
 </head>
 <body>
 
 <div class="header">
   <div>
-    <h1>&#x1F5FA; Mapa de Riesgos Laborales &#x2014; PyP Pack | Bodega / Planta Santiago</h1>
-    <div class="meta">MIPER fuente: MIPER_PyP_Pack_Bodega_Santiago_2026-06.xlsx &nbsp;|&nbsp; Versi&#xF3;n 1.0 &nbsp;|&nbsp; 2026-06-24 &nbsp;|&nbsp; DS N&#xB0;44/2024 &nbsp;|&nbsp; 30 riesgos &nbsp;|&nbsp; 6 cargos</div>
+    <h1>🗺 Mapa de Riesgos Laborales — PyP Pack | Bodega/Planta Santiago</h1>
+    <div class="meta">DS N°44/2024 · Ley 16.744 · Basado en MIPER v1.0 · 2026-06-24 · 30 riesgos identificados</div>
+    <div class="meta">Centro de trabajo: Bodega Santiago (25 m × 70 m) | Generado: 2026-06-25</div>
   </div>
-  <div class="badge-borrador">&#x26A0; BORRADOR &#x2014; REQUIERE VALIDACI&#xD3;N T&#xC9;CNICA</div>
+  <span class="badge">4 Críticos · 10 Altos</span>
 </div>
 
-<div class="main">
-  <div class="plano-wrap">
-    <h2>&#x1F4CD; Plano esquem&#xE1;tico &#x2014; haz clic en una zona para ver sus riesgos</h2>
-    <svg id="plano" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg">
+<div class="filters">
+  <label>Nivel:</label>
+  <select id="filter-nivel">
+    <option value="">Todos</option>
+    <option value="C">Crítico</option>
+    <option value="A">Alto</option>
+    <option value="M">Medio</option>
+    <option value="B">Bajo</option>
+  </select>
+  <label>Zona:</label>
+  <select id="filter-zona">
+    <option value="">Todas</option>
+    <option value="transversal">Transversal</option>
+    <option value="racks">Racks</option>
+    <option value="pasillos">Pasillos</option>
+    <option value="zona-sur">Zona Sur / Carga</option>
+    <option value="porton">Portón / Exterior</option>
+    <option value="oficinas">Oficinas</option>
+    <option value="produccion">Producción/Envasado</option>
+  </select>
+  <label>Proceso:</label>
+  <select id="filter-proceso">
+    <option value="">Todos</option>
+    <option value="Administración/RRHH">Administración/RRHH</option>
+    <option value="Aseo y Limpieza">Aseo y Limpieza</option>
+    <option value="Logística/Bodega">Logística/Bodega</option>
+    <option value="Producción/Rollos">Producción/Rollos</option>
+    <option value="Ventas/Comercial">Ventas/Comercial</option>
+    <option value="Supervisión Logística">Supervisión Logística</option>
+    <option value="Logística Regional">Logística Regional</option>
+  </select>
+  <input type="search" id="filter-text" placeholder="Buscar riesgo…" style="width:200px"/>
+  <button class="reset-btn" onclick="resetFilters()">Limpiar filtros</button>
+</div>
 
-      <rect x="0" y="0" width="700" height="520" fill="#ecf0f1" rx="6"/>
-      <text x="350" y="16" font-size="9.5" fill="#7f8c8d" text-anchor="middle" font-family="Arial">PyP Pack &#x2014; Bodega / Planta Santiago (plano esquem&#xE1;tico sin escala)</text>
+<div class="layout">
+  <div class="map-panel">
+    <div class="map-wrapper">
+      <svg xmlns="http://www.w3.org/2000/svg" width="900" height="1050" viewBox="0 0 900 1050" id="mainSVG">
+        <defs>
+          <style>
+            .bg{fill:#f7f4ee}.wall{stroke:#1f2933;stroke-width:5;fill:none;stroke-linecap:square}
+            .thin{stroke:#50606f;stroke-width:1.5;fill:none}.dash{stroke:#64748b;stroke-width:2;stroke-dasharray:8 6;fill:none}
+            .rack{fill:#9fb8a0;stroke:#31543b;stroke-width:2}.aisle{fill:#e9e2d5;stroke:#d0c4b1;stroke-width:1}
+            .office{fill:#f4c7a1;stroke:#9a5a2f;stroke-width:2}.gate{stroke:#2563eb;stroke-width:6;fill:none;stroke-linecap:round}
+            .entry{fill:#d8e8f7;stroke:#6788a8;stroke-width:1.5}
+            .lbl{font-family:Arial,Helvetica,sans-serif;fill:#16202a;font-size:18px}
+            .sm{font-family:Arial,Helvetica,sans-serif;fill:#334155;font-size:14px}
+            .ti{font-family:Arial,Helvetica,sans-serif;fill:#475569;font-size:12px}
+            .ttl{font-family:Arial,Helvetica,sans-serif;fill:#0f172a;font-size:22px;font-weight:700}
+            .sub{font-family:Arial,Helvetica,sans-serif;fill:#334155;font-size:14px}
+            .dim{stroke:#334155;stroke-width:1.5;marker-start:url(#arr);marker-end:url(#arr)}
+          </style>
+          <marker id="arr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+          </marker>
+          <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#d8d2c8" stroke-width="0.5"/>
+          </pattern>
+        </defs>
 
-      <!-- PATIO CARGA / EXTERIOR -->
-      <rect class="zona" id="z-patio" data-zona="patio" x="10" y="22" width="680" height="82" fill="#c0392b" stroke="#922b21" stroke-width="1.5" rx="4" opacity="0.90"/>
-      <text class="zona-label" x="350" y="52">PATIO DE CARGA / ACCESO / V&#xCD;A P&#xDA;BLICA</text>
-      <text class="zona-sublabel" x="350" y="66">Conductor-Ayudante &#xB7; Vendedor(a) &#xB7; Subjefe Log&#xED;stica</text>
-      <text class="zona-badge" x="350" y="82">&#x1F534; CR&#xCD;TICO &#x2014; R8 R22 R26 &#x2014; Accidente tr&#xE1;nsito / Sin manejo defensivo documentado</text>
+        <!-- FONDO -->
+        <rect class="bg" x="0" y="0" width="900" height="1050"/>
+        <text class="ttl" x="70" y="44">Plano base bodega 70 m × 25 m</text>
+        <text class="sub" x="70" y="66">PyP Pack · Bodega/Planta Santiago · Escala aprox. 1 m = 10 px</text>
+        <rect x="180" y="120" width="250" height="700" fill="url(#grid)" opacity="0.65"/>
 
-      <!-- BODEGA / ALMACÉN -->
-      <rect class="zona" id="z-bodega" data-zona="bodega" x="10" y="114" width="420" height="200" fill="#e67e22" stroke="#ca6f1e" stroke-width="1.5" rx="4" opacity="0.92"/>
-      <text class="zona-label" x="220" y="142">BODEGA / ALMACENAMIENTO</text>
-      <text class="zona-sublabel" x="220" y="156">Conductor-Ayudante de Bodega (5) &#xB7; Subjefe Log&#xED;stica (1)</text>
-      <text class="zona-badge" x="220" y="170">&#x1F7E0; ALTO &#x2014; R9 R10 R11 R12 R13 R24 R25 &#x2014; Sin demarcaci&#xF3;n ni capacitaci&#xF3;n</text>
-      <!-- Estanterías -->
-      <rect x="25" y="185" width="52" height="110" fill="rgba(0,0,0,0.13)" rx="2"/>
-      <rect x="87" y="185" width="52" height="110" fill="rgba(0,0,0,0.13)" rx="2"/>
-      <rect x="149" y="185" width="52" height="110" fill="rgba(0,0,0,0.13)" rx="2"/>
-      <rect x="211" y="185" width="52" height="110" fill="rgba(0,0,0,0.13)" rx="2"/>
-      <rect x="273" y="185" width="52" height="110" fill="rgba(0,0,0,0.13)" rx="2"/>
-      <text x="170" y="248" font-size="9" fill="rgba(255,255,255,0.55)" text-anchor="middle">[ Estanter&#xED;as ]</text>
-      <!-- Zorra -->
-      <rect x="345" y="248" width="50" height="30" fill="rgba(0,0,0,0.22)" rx="3"/>
-      <text x="370" y="268" font-size="8" fill="rgba(255,255,255,0.85)" text-anchor="middle">Zorra</text>
-      <!-- Pasillo -->
-      <rect x="10" y="314" width="420" height="20" fill="rgba(255,255,255,0.28)" stroke="rgba(255,255,255,0.45)" stroke-width="1" rx="2"/>
-      <text x="220" y="328" font-size="7.5" fill="rgba(255,255,255,0.95)" text-anchor="middle" font-weight="700">&#x25C5; PASILLO PEATONAL / TR&#xC1;NSITO EQUIPOS &#x2014; SIN DEMARCACI&#xD3;N &#x25BA;</text>
+        <!-- RACKS Y PASILLOS -->
+        <rect class="rack" x="180" y="120" width="30" height="630"/>
+        <rect class="aisle" x="210" y="120" width="43.33" height="630"/>
+        <rect class="rack" x="253.33" y="120" width="30" height="630"/>
+        <rect class="aisle" x="283.33" y="120" width="43.34" height="630"/>
+        <rect class="rack" x="326.67" y="120" width="30" height="630"/>
+        <rect class="aisle" x="356.67" y="120" width="43.33" height="630"/>
+        <rect class="rack" x="400" y="120" width="30" height="630"/>
 
-      <!-- PRODUCCIÓN / ENVASADO -->
-      <rect class="zona" id="z-produccion" data-zona="produccion" x="440" y="114" width="250" height="200" fill="#c0392b" stroke="#922b21" stroke-width="1.5" rx="4" opacity="0.92"/>
-      <text class="zona-label" x="565" y="142">PRODUCCI&#xD3;N / ENVASADO</text>
-      <text class="zona-sublabel" x="565" y="156">Operario Envasado (2)</text>
-      <text class="zona-badge" x="565" y="170">&#x1F534; CR&#xCD;TICO &#x2014; R14 R15 R16 R18 R19</text>
-      <!-- Rebobinadora -->
-      <ellipse cx="565" cy="242" rx="58" ry="40" fill="rgba(0,0,0,0.22)" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
-      <text x="565" y="239" font-size="9" fill="rgba(255,255,255,0.95)" text-anchor="middle" font-weight="700">REBOBINADORA</text>
-      <text x="565" y="252" font-size="7.5" fill="rgba(255,255,255,0.75)" text-anchor="middle">&#x26A0; Sin guardas &#xB7; Sin LOTO</text>
-      <!-- Advertencia -->
-      <rect x="478" y="290" width="90" height="16" fill="rgba(0,0,0,0.28)" rx="2"/>
-      <text x="523" y="302" font-size="8" fill="#f39c12" text-anchor="middle" font-weight="700">&#x26A0; Atrapamiento CR&#xCD;TICO</text>
+        <!-- ZONA SUR + OFICINAS + PORTON -->
+        <rect class="entry" x="180" y="750" width="250" height="70"/>
+        <rect class="office" x="210" y="790" width="80" height="30"/>
+        <text class="sm" x="219" y="809">Oficinas 8×3 m</text>
+        <rect class="entry" x="370" y="760" width="60" height="60"/>
+        <path class="dash" d="M 370 760 L 430 820"/>
+        <path class="dash" d="M 370 820 L 430 760"/>
 
-      <!-- ASEO / LIMPIEZA -->
-      <rect class="zona" id="z-aseo" data-zona="aseo" x="10" y="344" width="200" height="100" fill="#e67e22" stroke="#ca6f1e" stroke-width="1.5" rx="4" opacity="0.90"/>
-      <text class="zona-label" x="110" y="376">ASEO / LIMPIEZA</text>
-      <text class="zona-sublabel" x="110" y="390">Auxiliar de Aseo (3)</text>
-      <text class="zona-badge" x="110" y="408">&#x1F7E0; ALTO &#x2014; R4 R5 R6 R7</text>
+        <!-- PERIMETRO -->
+        <path class="wall" d="M 180 120 L 430 120"/>
+        <path class="wall" d="M 180 120 L 180 820"/>
+        <path class="wall" d="M 180 820 L 430 820"/>
+        <path class="wall" d="M 430 120 L 430 760"/>
+        <path class="gate" d="M 430 760 L 430 820"/>
 
-      <!-- SALA DE VENTAS / RETAIL -->
-      <rect class="zona" id="z-ventas" data-zona="ventas" x="220" y="344" width="210" height="100" fill="#d4ac0d" stroke="#b7950b" stroke-width="1.5" rx="4" opacity="0.92"/>
-      <text class="zona-label" x="325" y="376">SALA DE VENTAS / RETAIL</text>
-      <text class="zona-sublabel" x="325" y="390">Vendedor(a) (7)</text>
-      <text class="zona-badge" x="325" y="408">&#x1F7E1; MEDIO &#x2014; R20 R21 R23</text>
-      <rect x="240" y="400" width="172" height="26" fill="rgba(0,0,0,0.12)" rx="2"/>
-      <text x="326" y="417" font-size="8" fill="rgba(255,255,255,0.8)" text-anchor="middle">[ Mostrador atenci&#xF3;n ]</text>
+        <!-- ETIQUETAS -->
+        <text class="ti" x="201" y="450" transform="rotate(-90 201 450)">Rack 1 · 63 m × 3 m × 6 m alto</text>
+        <text class="ti" x="274" y="450" transform="rotate(-90 274 450)">Rack 2 · 63 m × 3 m × 6 m alto</text>
+        <text class="ti" x="348" y="450" transform="rotate(-90 348 450)">Rack 3 · 63 m × 3 m × 6 m alto</text>
+        <text class="ti" x="421" y="450" transform="rotate(-90 421 450)">Rack 4 · 63 m × 3 m × 6 m alto</text>
+        <text class="sm" x="438" y="793">Portón 6 m</text>
+        <text class="ti" x="192" y="145">Racks pegados a muros laterales</text>
+        <text class="ti" x="192" y="162">Pasillos interiores ≈ 4,33 m</text>
+        <text class="ti" x="192" y="737">Zona sur despejada 7 m · inicio racks</text>
 
-      <!-- ADMINISTRACIÓN / RRHH -->
-      <rect class="zona" id="z-admin" data-zona="admin" x="440" y="344" width="250" height="100" fill="#d4ac0d" stroke="#b7950b" stroke-width="1.5" rx="4" opacity="0.92"/>
-      <text class="zona-label" x="565" y="376">ADMINISTRACI&#xD3;N / RRHH</text>
-      <text class="zona-sublabel" x="565" y="390">Asistente RRHH (1) &#xB7; Subjefe Log&#xED;stica (1)</text>
-      <text class="zona-badge" x="565" y="408">&#x1F7E1; MEDIO &#x2014; R1 R2 R3 R27</text>
+        <!-- DIMENSIONES -->
+        <line class="dim" x1="180" y1="875" x2="430" y2="875"/>
+        <line class="thin" x1="180" y1="830" x2="180" y2="885"/>
+        <line class="thin" x1="430" y1="830" x2="430" y2="885"/>
+        <text class="lbl" x="286" y="905">25 m</text>
+        <line class="dim" x1="120" y1="120" x2="120" y2="820"/>
+        <line class="thin" x1="135" y1="120" x2="175" y2="120"/>
+        <line class="thin" x1="135" y1="820" x2="175" y2="820"/>
+        <text class="lbl" x="74" y="484" transform="rotate(-90 74 484)">70 m</text>
+        <line class="dim" x1="180" y1="775" x2="210" y2="775"/>
+        <text class="ti" x="184" y="766">3 m</text>
+        <line class="thin" x1="180" y1="770" x2="180" y2="790"/>
+        <line class="thin" x1="210" y1="770" x2="210" y2="790"/>
 
-      <!-- CCP CONCEPCIÓN -->
-      <rect class="zona" id="z-ccp" data-zona="ccp" x="10" y="454" width="680" height="56" fill="#c0392b" stroke="#922b21" stroke-width="1.5" rx="4" opacity="0.80"/>
-      <text class="zona-label" x="350" y="478">CCP &#x2014; CONCEPCI&#xD3;N (SITIO NO AUDITADO)</text>
-      <text class="zona-sublabel" x="350" y="494">Encargado Log&#xED;stica Sur (1) &#x2014; R28 R29 R30 &#x2014; REQUIERE VALIDACI&#xD3;N T&#xC9;CNICA ANTES DE USAR</text>
+        <!-- BRUJULA -->
+        <line x1="585" y1="175" x2="585" y2="110" stroke="#0f172a" stroke-width="3" marker-end="url(#arr)"/>
+        <text class="lbl" x="573" y="198">N</text>
+        <text class="sm" x="533" y="230">Oriente</text>
+        <line x1="532" y1="238" x2="604" y2="238" stroke="#0f172a" stroke-width="2" marker-end="url(#arr)"/>
+        <text class="sm" x="520" y="268">Poniente</text>
+        <line x1="604" y1="276" x2="532" y2="276" stroke="#0f172a" stroke-width="2" marker-end="url(#arr)"/>
 
-    </svg>
-  </div>
+        <!-- ═══════════════════ SÍMBOLOS ISP ═══════════════════ -->
+        <!-- Formato: círculo (color nivel) + triángulo amarillo + pictograma negro -->
 
-  <div class="side-panel">
-    <div class="stats">
-      <h2>&#x1F4CA; Resumen por nivel (evaluaci&#xF3;n inicial)</h2>
-      <div class="stats-grid">
-        <div class="stat-card sc-critico"><div class="num">4</div><div class="lbl">Cr&#xED;ticos (MR 15&#x2013;25)</div></div>
-        <div class="stat-card sc-alto"><div class="num">10</div><div class="lbl">Altos (MR 10&#x2013;14)</div></div>
-        <div class="stat-card sc-medio"><div class="num">14</div><div class="lbl">Medios (MR 5&#x2013;9)</div></div>
-        <div class="stat-card sc-bajo"><div class="num">2</div><div class="lbl">Bajos (MR 1&#x2013;4)</div></div>
+        <!-- S1: PSICOSOCIAL – Transversal (superior izquierda externa al plano) -->
+        <g class="risk-symbol" data-ids="2,20" data-zona="transversal"
+           transform="translate(490,120)"
+           onclick="highlightRisks([2,20])"
+           onmouseenter="showTip(event,'S1')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="22" fill="#f1c40f" stroke="#b8860b" stroke-width="2"/>
+          <polygon points="0,-13 12,8 -12,8" fill="#f9e600" stroke="#9a7000" stroke-width="1.5"/>
+          <circle cx="0" cy="-4" r="5" fill="#1a1a1a"/>
+          <path d="M-5,3 L-2,7 L2,4 L5,8" fill="none" stroke="#1a1a1a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <text y="38" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Psicosocial</text>
+          <text y="48" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R2, R20</text>
+        </g>
+
+        <!-- S2: CAÍDA DE OBJETOS desde racks (Naranja=Alto, R10) -->
+        <g class="risk-symbol" data-ids="10" data-zona="racks"
+           transform="translate(305,165)"
+           onclick="highlightRisks([10])"
+           onmouseenter="showTip(event,'S2')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="20" fill="#e67e22" stroke="#a85a00" stroke-width="2"/>
+          <polygon points="0,-12 11,7 -11,7" fill="#f9e600" stroke="#9a5000" stroke-width="1.5"/>
+          <rect x="-5" y="-8" width="10" height="8" fill="#1a1a1a" rx="1"/>
+          <line x1="0" y1="0" x2="0" y2="6" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="-4" y1="4" x2="0" y2="6" stroke="#1a1a1a" stroke-width="1.5"/>
+          <line x1="4" y1="4" x2="0" y2="6" stroke="#1a1a1a" stroke-width="1.5"/>
+          <text y="34" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Caída objetos</text>
+          <text y="44" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R10</text>
+        </g>
+
+        <!-- S3: CAÍDA A DISTINTO NIVEL en escalera rack (Naranja=Alto, R11) -->
+        <g class="risk-symbol" data-ids="11" data-zona="racks"
+           transform="translate(305,240)"
+           onclick="highlightRisks([11])"
+           onmouseenter="showTip(event,'S3')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="20" fill="#e67e22" stroke="#a85a00" stroke-width="2"/>
+          <polygon points="0,-12 11,7 -11,7" fill="#f9e600" stroke="#9a5000" stroke-width="1.5"/>
+          <circle cx="0" cy="-7" r="4" fill="#1a1a1a"/>
+          <line x1="0" y1="-3" x2="-3" y2="4" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="-3" y1="0" x2="3" y2="0" stroke="#1a1a1a" stroke-width="1.5"/>
+          <line x1="-3" y1="4" x2="2" y2="7" stroke="#1a1a1a" stroke-width="2"/>
+          <text y="34" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Caída dist. nivel</text>
+          <text y="44" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R11</text>
+        </g>
+
+        <!-- S4: CAÍDA DE OBJETOS supervisor (Naranja=Alto, R24) -->
+        <g class="risk-symbol" data-ids="24" data-zona="racks"
+           transform="translate(305,315)"
+           onclick="highlightRisks([24])"
+           onmouseenter="showTip(event,'S4')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="20" fill="#e67e22" stroke="#a85a00" stroke-width="2"/>
+          <polygon points="0,-12 11,7 -11,7" fill="#f9e600" stroke="#9a5000" stroke-width="1.5"/>
+          <rect x="-5" y="-8" width="10" height="8" fill="#1a1a1a" rx="1"/>
+          <line x1="0" y1="0" x2="0" y2="6" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="-4" y1="4" x2="0" y2="6" stroke="#1a1a1a" stroke-width="1.5"/>
+          <line x1="4" y1="4" x2="0" y2="6" stroke="#1a1a1a" stroke-width="1.5"/>
+          <text y="34" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Caída objetos</text>
+          <text y="44" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R24 Superv.</text>
+        </g>
+
+        <!-- S5: VEHÍCULO EN MOVIMIENTO pasillos (Naranja=Alto, R12+R25) -->
+        <g class="risk-symbol" data-ids="12,25" data-zona="pasillos"
+           transform="translate(305,400)"
+           onclick="highlightRisks([12,25])"
+           onmouseenter="showTip(event,'S5')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="22" fill="#e67e22" stroke="#a85a00" stroke-width="2"/>
+          <polygon points="0,-13 12,8 -12,8" fill="#f9e600" stroke="#9a5000" stroke-width="1.5"/>
+          <rect x="-9" y="-4" width="14" height="8" fill="#1a1a1a" rx="2"/>
+          <circle cx="-6" cy="6" r="2.5" fill="#1a1a1a"/>
+          <circle cx="4" cy="6" r="2.5" fill="#1a1a1a"/>
+          <line x1="5" y1="-4" x2="5" y2="-9" stroke="#1a1a1a" stroke-width="2"/>
+          <text y="38" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Vehículo en mov.</text>
+          <text y="48" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R12, R25</text>
+        </g>
+
+        <!-- S6: MMC / SOBREESFUERZO carga/descarga (Naranja=Alto, R9) -->
+        <g class="risk-symbol" data-ids="9" data-zona="zona-sur"
+           transform="translate(230,775)"
+           onclick="highlightRisks([9])"
+           onmouseenter="showTip(event,'S6')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="20" fill="#e67e22" stroke="#a85a00" stroke-width="2"/>
+          <polygon points="0,-12 11,7 -11,7" fill="#f9e600" stroke="#9a5000" stroke-width="1.5"/>
+          <circle cx="0" cy="-7" r="3.5" fill="#1a1a1a"/>
+          <line x1="0" y1="-3.5" x2="0" y2="3" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="-6" y1="-5" x2="6" y2="-5" stroke="#1a1a1a" stroke-width="2"/>
+          <rect x="-5" y="-9" width="10" height="5" fill="none" stroke="#1a1a1a" stroke-width="1.5"/>
+          <text y="34" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">MMC/Sobreesfuerzo</text>
+          <text y="44" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R9</text>
+        </g>
+
+        <!-- S7: ILUMINACIÓN/TEMPERATURA (Amarillo=Medio, R13) -->
+        <g class="risk-symbol" data-ids="13" data-zona="zona-sur"
+           transform="translate(340,775)"
+           onclick="highlightRisks([13])"
+           onmouseenter="showTip(event,'S7')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="20" fill="#f1c40f" stroke="#b8860b" stroke-width="2"/>
+          <polygon points="0,-12 11,7 -11,7" fill="#f9e600" stroke="#9a7000" stroke-width="1.5"/>
+          <circle cx="0" cy="-2" r="5" fill="#1a1a1a"/>
+          <line x1="0" y1="-9" x2="0" y2="-8" stroke="#1a1a1a" stroke-width="1.5"/>
+          <line x1="6" y1="-7" x2="5" y2="-6" stroke="#1a1a1a" stroke-width="1.5"/>
+          <line x1="7" y1="-2" x2="6" y2="-2" stroke="#1a1a1a" stroke-width="1.5"/>
+          <line x1="6" y1="3" x2="5" y2="2" stroke="#1a1a1a" stroke-width="1.5"/>
+          <text y="34" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Ilum./Temperatura</text>
+          <text y="44" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R13</text>
+        </g>
+
+        <!-- S8: CHOQUE/COLISIÓN portón conductor+subjefe (Rojo=Crítico, R8+R26) -->
+        <g class="risk-symbol" data-ids="8,26" data-zona="porton"
+           transform="translate(490,790)"
+           onclick="highlightRisks([8,26])"
+           onmouseenter="showTip(event,'S8')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="22" fill="#c0392b" stroke="#7b0e07" stroke-width="2"/>
+          <polygon points="0,-13 12,8 -12,8" fill="#f9e600" stroke="#7b0007" stroke-width="1.5"/>
+          <rect x="-11" y="-3" width="16" height="7" fill="#1a1a1a" rx="2"/>
+          <circle cx="-7" cy="5" r="2.5" fill="#1a1a1a"/>
+          <circle cx="2" cy="5" r="2.5" fill="#1a1a1a"/>
+          <line x1="-12" y1="-1" x2="-15" y2="-5" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="-14" y1="-3" x2="-11" y2="-5" stroke="#1a1a1a" stroke-width="1.5"/>
+          <text y="38" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Choque/Colisión</text>
+          <text y="48" text-anchor="middle" font-size="8" fill="#c0392b" font-weight="bold" font-family="Arial">R8 CRÍTICO · R26</text>
+        </g>
+
+        <!-- S9: ERGONÓMICO SEDENTE oficinas (Amarillo=Medio, R1+R27) -->
+        <g class="risk-symbol" data-ids="1,27" data-zona="oficinas"
+           transform="translate(230,845)"
+           onclick="highlightRisks([1,27])"
+           onmouseenter="showTip(event,'S9')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="20" fill="#f1c40f" stroke="#b8860b" stroke-width="2"/>
+          <polygon points="0,-12 11,7 -11,7" fill="#f9e600" stroke="#9a7000" stroke-width="1.5"/>
+          <circle cx="0" cy="-7" r="3.5" fill="#1a1a1a"/>
+          <line x1="0" y1="-3.5" x2="0" y2="2" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="-6" y1="2" x2="6" y2="2" stroke="#1a1a1a" stroke-width="1.5"/>
+          <line x1="0" y1="2" x2="4" y2="6" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="4" y1="6" x2="8" y2="6" stroke="#1a1a1a" stroke-width="1.5"/>
+          <text y="34" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Ergon. Sedente</text>
+          <text y="44" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R1, R27</text>
+        </g>
+
+        <!-- S10: CAÍDA MISMO NIVEL oficinas (Amarillo=Medio, R3) -->
+        <g class="risk-symbol" data-ids="3" data-zona="oficinas"
+           transform="translate(295,845)"
+           onclick="highlightRisks([3])"
+           onmouseenter="showTip(event,'S10')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="20" fill="#f1c40f" stroke="#b8860b" stroke-width="2"/>
+          <polygon points="0,-12 11,7 -11,7" fill="#f9e600" stroke="#9a7000" stroke-width="1.5"/>
+          <circle cx="0" cy="-7" r="3.5" fill="#1a1a1a"/>
+          <line x1="0" y1="-3.5" x2="-4" y2="2" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="-4" y1="2" x2="5" y2="5" stroke="#1a1a1a" stroke-width="1.5"/>
+          <line x1="-2" y1="-1" x2="4" y2="-1" stroke="#1a1a1a" stroke-width="1.5"/>
+          <text y="34" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Caída mismo niv.</text>
+          <text y="44" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R3</text>
+        </g>
+
+        <!-- S11: ATRAPAMIENTO MECÁNICO rebobinadora (Rojo=CRÍTICO, R14) -->
+        <!-- Zona producción no está en el plano; se ubica esquina sup-der como referencia -->
+        <g class="risk-symbol" data-ids="14" data-zona="produccion"
+           transform="translate(490,160)"
+           onclick="highlightRisks([14])"
+           onmouseenter="showTip(event,'S11')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="22" fill="#c0392b" stroke="#7b0e07" stroke-width="2.5"/>
+          <polygon points="0,-13 12,8 -12,8" fill="#f9e600" stroke="#7b0007" stroke-width="1.5"/>
+          <circle cx="0" cy="-3" r="7" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+          <circle cx="0" cy="-3" r="3" fill="#1a1a1a"/>
+          <line x1="-4" y1="4" x2="-2" y2="7" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="4" y1="4" x2="2" y2="7" stroke="#1a1a1a" stroke-width="2"/>
+          <text y="38" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Atrapamiento</text>
+          <text y="48" text-anchor="middle" font-size="8" fill="#c0392b" font-weight="bold" font-family="Arial">R14 CRÍTICO*</text>
+        </g>
+
+        <!-- S12: ERGON./MMC/VIBRACIÓN producción (Naranja=Alto, R15+R16+R18+R19) -->
+        <g class="risk-symbol" data-ids="15,16,18,19" data-zona="produccion"
+           transform="translate(490,255)"
+           onclick="highlightRisks([15,16,18,19])"
+           onmouseenter="showTip(event,'S12')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="22" fill="#e67e22" stroke="#a85a00" stroke-width="2"/>
+          <polygon points="0,-13 12,8 -12,8" fill="#f9e600" stroke="#9a5000" stroke-width="1.5"/>
+          <circle cx="0" cy="-8" r="4" fill="#1a1a1a"/>
+          <line x1="0" y1="-4" x2="0" y2="4" stroke="#1a1a1a" stroke-width="2.5"/>
+          <line x1="-7" y1="-2" x2="7" y2="-2" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="0" y1="4" x2="-4" y2="9" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="0" y1="4" x2="4" y2="9" stroke="#1a1a1a" stroke-width="2"/>
+          <text y="38" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Ergon./MMC/Vibrac.*</text>
+          <text y="48" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R15,16,18,19</text>
+        </g>
+
+        <!-- S13: AGENTE QUÍMICO aseo (Naranja=Alto, R4) -->
+        <g class="risk-symbol" data-ids="4" data-zona="zona-sur"
+           transform="translate(490,350)"
+           onclick="highlightRisks([4])"
+           onmouseenter="showTip(event,'S13')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="20" fill="#e67e22" stroke="#a85a00" stroke-width="2"/>
+          <polygon points="0,-12 11,7 -11,7" fill="#f9e600" stroke="#9a5000" stroke-width="1.5"/>
+          <rect x="-5" y="-7" width="10" height="12" fill="#1a1a1a" rx="1"/>
+          <rect x="-3" y="-9" width="6" height="3" fill="#1a1a1a" rx="1"/>
+          <line x1="-3" y1="-2" x2="3" y2="-2" stroke="white" stroke-width="1"/>
+          <line x1="0" y1="-5" x2="0" y2="-2" stroke="white" stroke-width="1"/>
+          <text y="34" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Agente Químico</text>
+          <text y="44" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R4</text>
+        </g>
+
+        <!-- S14: PISO MOJADO / caída mismo nivel (Naranja=Alto, R5) -->
+        <g class="risk-symbol" data-ids="5" data-zona="zona-sur"
+           transform="translate(490,440)"
+           onclick="highlightRisks([5])"
+           onmouseenter="showTip(event,'S14')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="20" fill="#e67e22" stroke="#a85a00" stroke-width="2"/>
+          <polygon points="0,-12 11,7 -11,7" fill="#f9e600" stroke="#9a5000" stroke-width="1.5"/>
+          <circle cx="0" cy="-7" r="3.5" fill="#1a1a1a"/>
+          <line x1="0" y1="-3.5" x2="-4" y2="2" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="-4" y1="2" x2="5" y2="5" stroke="#1a1a1a" stroke-width="1.5"/>
+          <path d="M -6 8 Q 0 6 6 8" fill="none" stroke="#1a1a1a" stroke-width="1.5"/>
+          <text y="34" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Piso mojado</text>
+          <text y="44" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R5</text>
+        </g>
+
+        <!-- S15: MMC ASEO (Naranja=Alto, R6) -->
+        <g class="risk-symbol" data-ids="6" data-zona="zona-sur"
+           transform="translate(490,530)"
+           onclick="highlightRisks([6])"
+           onmouseenter="showTip(event,'S15')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="20" fill="#e67e22" stroke="#a85a00" stroke-width="2"/>
+          <polygon points="0,-12 11,7 -11,7" fill="#f9e600" stroke="#9a5000" stroke-width="1.5"/>
+          <circle cx="0" cy="-7" r="3.5" fill="#1a1a1a"/>
+          <line x1="0" y1="-3.5" x2="0" y2="3" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="-6" y1="-5" x2="6" y2="-5" stroke="#1a1a1a" stroke-width="2"/>
+          <rect x="-5" y="-9" width="10" height="5" fill="none" stroke="#1a1a1a" stroke-width="1.5"/>
+          <text y="34" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">MMC – Aseo</text>
+          <text y="44" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R6</text>
+        </g>
+
+        <!-- S16: BIOLÓGICO baños (Amarillo=Medio, R7) -->
+        <g class="risk-symbol" data-ids="7" data-zona="zona-sur"
+           transform="translate(490,620)"
+           onclick="highlightRisks([7])"
+           onmouseenter="showTip(event,'S16')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="20" fill="#f1c40f" stroke="#b8860b" stroke-width="2"/>
+          <polygon points="0,-12 11,7 -11,7" fill="#f9e600" stroke="#9a7000" stroke-width="1.5"/>
+          <circle cx="0" cy="-2" r="5" fill="#1a1a1a"/>
+          <line x1="0" y1="-8" x2="0" y2="-7" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
+          <line x1="5" y1="-6" x2="4" y2="-5" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="6" y1="-2" x2="5" y2="-2" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="5" y1="2" x2="4" y2="1.5" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"/>
+          <text y="34" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Biológico</text>
+          <text y="44" text-anchor="middle" font-size="8" fill="#334155" font-family="Arial">R7</text>
+        </g>
+
+        <!-- S17: ACCIDENTE TRÁNSITO vendedor+CCP (Rojo=CRÍTICO, R22+R28) -->
+        <g class="risk-symbol" data-ids="22,28" data-zona="porton"
+           transform="translate(490,710)"
+           onclick="highlightRisks([22,28])"
+           onmouseenter="showTip(event,'S17')" onmouseleave="hideTip()">
+          <circle cx="0" cy="0" r="22" fill="#c0392b" stroke="#7b0e07" stroke-width="2.5"/>
+          <polygon points="0,-13 12,8 -12,8" fill="#f9e600" stroke="#7b0007" stroke-width="1.5"/>
+          <rect x="-11" y="-3" width="16" height="7" fill="#1a1a1a" rx="2"/>
+          <circle cx="-7" cy="5" r="2.5" fill="#1a1a1a"/>
+          <circle cx="2" cy="5" r="2.5" fill="#1a1a1a"/>
+          <line x1="-12" y1="-1" x2="-15" y2="-5" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="-14" y1="-3" x2="-11" y2="-5" stroke="#1a1a1a" stroke-width="1.5"/>
+          <text y="38" text-anchor="middle" font-size="9" fill="#334155" font-family="Arial">Acc. Tránsito</text>
+          <text y="48" text-anchor="middle" font-size="8" fill="#c0392b" font-weight="bold" font-family="Arial">R22,R28 CRÍTICO</text>
+        </g>
+
+        <!-- ─── LEYENDA DEL MAPA (esquina inferior derecha) ─── -->
+        <rect x="470" y="855" width="400" height="180" fill="white" stroke="#c5cdd8" stroke-width="1.5" rx="6" opacity="0.97"/>
+        <text x="484" y="875" font-family="Arial" font-size="13" font-weight="700" fill="#1e3a5f">LEYENDA — Símbolo ISP (DS N°44/2024)</text>
+        <circle cx="484" cy="894" r="7" fill="#c0392b"/><text x="496" y="898" font-family="Arial" font-size="11" fill="#333">Crítico (MR 15–25)</text>
+        <circle cx="484" cy="912" r="7" fill="#e67e22"/><text x="496" y="916" font-family="Arial" font-size="11" fill="#333">Alto (MR 10–14)</text>
+        <circle cx="484" cy="930" r="7" fill="#f1c40f"/><text x="496" y="934" font-family="Arial" font-size="11" fill="#333">Medio (MR 5–9)</text>
+        <circle cx="484" cy="948" r="7" fill="#27ae60"/><text x="496" y="952" font-family="Arial" font-size="11" fill="#333">Bajo (MR 1–4)</text>
+        <text x="620" y="880" font-family="Arial" font-size="11" fill="#333" font-weight="600">Formato símbolo:</text>
+        <text x="620" y="896" font-family="Arial" font-size="10" fill="#333">● Círculo = nivel de riesgo</text>
+        <text x="620" y="910" font-family="Arial" font-size="10" fill="#333">▲ Triángulo amarillo = advertencia</text>
+        <text x="620" y="924" font-family="Arial" font-size="10" fill="#333">⬛ Pictograma negro = tipo de peligro</text>
+        <text x="620" y="940" font-family="Arial" font-size="10" fill="#475569">Fuente: MIPER PyP Pack v1.0 · 2026-06-24</text>
+        <text x="620" y="954" font-family="Arial" font-size="10" fill="#475569">MR = Probabilidad × Consecuencia</text>
+        <text x="484" y="970" font-family="Arial" font-size="9" fill="#c0392b" font-style="italic">* R14–R19 (Producción/Envasado): zona no representada en este plano.</text>
+        <text x="484" y="982" font-family="Arial" font-size="9" fill="#c0392b" font-style="italic">  Requiere plano actualizado o validación in-situ.</text>
+        <text x="484" y="997" font-family="Arial" font-size="10" fill="#64748b">v1.0 · 2026-06-25 · Validar con Comité Paritario y Prevención de Riesgos</text>
+
+      </svg>
+    </div>
+
+    <div class="legend-section">
+      <h3>Leyenda de niveles y tipos de riesgo (Símbolo ISP – DS N°44/2024)</h3>
+      <div class="legend-colors">
+        <div class="legend-color"><span class="legend-dot" style="background:#c0392b"></span>Crítico (MR 15–25)</div>
+        <div class="legend-color"><span class="legend-dot" style="background:#e67e22"></span>Alto (MR 10–14)</div>
+        <div class="legend-color"><span class="legend-dot" style="background:#f1c40f"></span>Medio (MR 5–9)</div>
+        <div class="legend-color"><span class="legend-dot" style="background:#27ae60"></span>Bajo (MR 1–4)</div>
       </div>
-      <div style="margin-top:10px;font-size:11px;color:#e74c3c;font-weight:600;">&#x26A0; 4 riesgos cr&#xED;ticos SIN controles documentados</div>
-    </div>
-
-    <div class="legend">
-      <h2>&#x1F6A8; Leyenda</h2>
-      <div class="legend-row"><div class="legend-dot" style="background:var(--critico)"></div> Cr&#xED;tico &#x2014; Acci&#xF3;n inmediata <span class="legend-range">MR 15&#x2013;25</span></div>
-      <div class="legend-row"><div class="legend-dot" style="background:var(--alto)"></div> Alto &#x2014; Acci&#xF3;n urgente <span class="legend-range">MR 10&#x2013;14</span></div>
-      <div class="legend-row"><div class="legend-dot" style="background:#d4ac0d"></div> Medio &#x2014; Mejorar controles <span class="legend-range">MR 5&#x2013;9</span></div>
-      <div class="legend-row"><div class="legend-dot" style="background:var(--bajo)"></div> Bajo &#x2014; Mantener controles <span class="legend-range">MR 1&#x2013;4</span></div>
-      <hr style="margin:8px 0;border-color:var(--border)">
-      <div style="font-size:10px;color:#7f8c8d;line-height:1.6">
-        Color de zona = nivel m&#xE1;s alto presente en esa &#xE1;rea.<br>
-        Escala: MR = P &#xD7; C (DS N&#xB0;44/2024).
+      <div style="margin-top:10px;font-size:12px;color:#475569;line-height:1.7">
+        Cada símbolo = <strong>círculo</strong> (color del nivel) + <strong>triángulo amarillo</strong> (advertencia) + <strong>pictograma negro</strong> (tipo de riesgo) — formato Anexo 3, Guía ISP Ley 16.744 / DS N°44/2024.<br>
+        <strong>⚠ Producción/Envasado (R14–R19):</strong> ubicados fuera del plano de la bodega — zona no representada en este croquis. <em>Requiere plano actualizado o validación in-situ con el responsable del área.</em>
       </div>
     </div>
 
-    <div class="zona-detail" id="zona-detail">
-      <h2>&#x1F4CB; Detalle por zona</h2>
-      <p class="hint">Haz clic en una zona del plano para ver sus riesgos.</p>
+    <div class="footer-note">
+      Mapa de riesgos basado en MIPER PyP Pack v1.0 (2026-06-24) · Ley 16.744 · DS N°44/2024 · MR = P × C ·
+      Centro: Bodega/Planta Santiago (25 m × 70 m) · Validar con trabajadores, Comité Paritario y Prevención de Riesgos antes de difusión oficial. · v1.0 · 2026-06-25
+    </div>
+  </div>
+
+  <!-- ─── TABLA ─── -->
+  <div class="table-panel">
+    <div class="table-header">📋 Tabla de riesgos MIPER — 30 riesgos (clic en símbolo para resaltar)</div>
+    <div style="overflow:auto;flex:1">
+      <table id="riskTable">
+        <thead>
+          <tr>
+            <th>#</th><th>Proceso</th><th>Peligro / Riesgo</th><th>Nivel</th><th>MR</th><th>Zona</th>
+          </tr>
+        </thead>
+        <tbody id="riskTbody"></tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<div class="tabla-wrap">
-  <h2>&#x1F4CB; Tabla completa &#x2014; PyP Pack | Bodega/Planta Santiago | 30 riesgos</h2>
-  <div class="filtros">
-    <button class="filtro-btn fb-todos active" onclick="filtrar('todos',this)">Todos (30)</button>
-    <button class="filtro-btn fb-critico" onclick="filtrar('Crítico',this)">&#x1F534; Cr&#xED;ticos (4)</button>
-    <button class="filtro-btn fb-alto" onclick="filtrar('Alto',this)">&#x1F7E0; Altos (10)</button>
-    <button class="filtro-btn fb-medio" onclick="filtrar('Medio',this)">&#x1F7E1; Medios (14)</button>
-    <button class="filtro-btn fb-bajo" onclick="filtrar('Bajo',this)">&#x1F7E2; Bajos (2)</button>
-  </div>
-  <div style="overflow-x:auto">
-  <table id="tabla-riesgos">
-    <thead>
-      <tr>
-        <th>#</th><th>&#xC1;rea / Proceso</th><th>Cargo</th><th>Actividad</th>
-        <th>Peligro</th><th>Tipo</th><th>Riesgo / Evento</th><th>Consecuencia</th>
-        <th>Nivel Inicial</th><th>Nivel Residual</th>
-        <th>Controles existentes</th><th>Acci&#xF3;n requerida</th><th>Estado</th>
-      </tr>
-    </thead>
-    <tbody id="tabla-body"></tbody>
-  </table>
-  </div>
-</div>
-
-<div class="footer">
-  Mapa de Riesgos &#x2014; PyP Pack | Bodega / Planta Santiago | MIPER v1.0 | 2026-06-24 | DS N&#xB0;44/2024 &nbsp;|&nbsp;
-  <strong style="color:#e74c3c">BORRADOR &#x2014; No usar como documento definitivo sin revisi&#xF3;n de prevencionista, jefatura y trabajadores expuestos.</strong>
-</div>
-
-<div class="tooltip" id="tooltip"></div>
+<div id="tooltip"></div>
 
 <script>
-const riesgos = [
-  {id:1,area:'Administración / RRHH',zona:'admin',cargo:'Asistente de RRHH',exp:1,
-   actividad:'Trabajo en computador (largas jornadas)',
-   peligro:'Postura sedente prolongada; uso intensivo de pantallas',
-   tipo:'Ergonómico',riesgo:'Lesión musculoesquelética (columna, cuello, muñecas); fatiga visual',
-   consecuencia:'Enfermedad profesional, dolor crónico, ausentismo',
-   ni:'Medio',mr_i:8,nr:'Medio',mr_r:6,
-   controles:'Escritorio y silla (regulabilidad no verificada). Sin programa ergonómico.',
-   accion:'Evaluación ergonómica. Pausas activas. Silla ergonómica certificada.',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
-
-  {id:2,area:'Administración / RRHH',zona:'admin',cargo:'Asistente de RRHH',exp:1,
-   actividad:'Gestión de personal, atención de conflictos laborales',
-   peligro:'Estrés laboral, carga mental excesiva',
-   tipo:'Psicosocial',riesgo:'Síndrome de burnout, trastorno ansioso-depresivo',
-   consecuencia:'Ausentismo, enfermedad profesional, accidente por distracción',
-   ni:'Medio',mr_i:6,nr:'Medio',mr_r:6,
-   controles:'Sin controles psicosociales documentados.',
-   accion:'Evaluación ISTAS21/SUSESO. Canales de comunicación. Apoyo de jefatura.',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
-
-  {id:3,area:'Administración / RRHH',zona:'admin',cargo:'Asistente de RRHH',exp:1,
-   actividad:'Desplazamiento en instalaciones',
-   peligro:'Caída al mismo nivel (piso húmedo, cables, desniveles)',
-   tipo:'Seguridad',riesgo:'Resbalón, tropezón, caída',
-   consecuencia:'Esguince, fractura, contusión',
-   ni:'Bajo',mr_i:4,nr:'Bajo',mr_r:2,
-   controles:'Sin señalización de piso húmedo verificada.',
-   accion:'Señalización de zonas de riesgo. Orden y limpieza. Calzado antideslizante.',
-   estado:'Borrador para validar'},
-
-  {id:4,area:'Aseo y Limpieza',zona:'aseo',cargo:'Auxiliar de Aseo',exp:3,
-   actividad:'Aplicación de productos de limpieza',
-   peligro:'Exposición a sustancias químicas irritantes / corrosivas',
-   tipo:'Químico',riesgo:'Contacto dérmico u ocular; inhalación de vapores',
-   consecuencia:'Dermatitis, irritación ocular, daño respiratorio',
-   ni:'Alto',mr_i:12,nr:'Medio',mr_r:6,
-   controles:'Guantes (uso no verificado). Sin HDS disponibles. Sin ventilación forzada.',
-   accion:'HDS disponibles. Guantes nitrilo, antiparras. Capacitación manejo químicos. Ventilación.',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
-
-  {id:5,area:'Aseo y Limpieza',zona:'aseo',cargo:'Auxiliar de Aseo',exp:3,
-   actividad:'Lavado y limpieza de pisos',
-   peligro:'Caída al mismo nivel — piso mojado / resbaladizo',
-   tipo:'Seguridad',riesgo:'Resbalón y caída',
-   consecuencia:'Fractura, traumatismo, contusión',
-   ni:'Alto',mr_i:12,nr:'Medio',mr_r:6,
-   controles:'Señalética de piso mojado (no verificada).',
-   accion:'Señalética visible. Calzado antideslizante. Delimitar zona húmeda.',
-   estado:'Borrador para validar'},
-
-  {id:6,area:'Aseo y Limpieza',zona:'aseo',cargo:'Auxiliar de Aseo',exp:3,
-   actividad:'Levantamiento y traslado de baldes, equipos de limpieza',
-   peligro:'Sobreesfuerzo por manejo manual de cargas',
-   tipo:'Ergonómico',riesgo:'Lesión lumbar aguda',
-   consecuencia:'Lumbago, hernia discal, incapacidad temporal',
-   ni:'Medio',mr_i:9,nr:'Bajo',mr_r:4,
-   controles:'Sin protocolo de manejo manual de cargas documentado.',
-   accion:'Protocolo manejo manual de cargas (Ley 20.949). Carros de transporte. Capacitación.',
-   estado:'Borrador para validar'},
-
-  {id:7,area:'Aseo y Limpieza',zona:'aseo',cargo:'Auxiliar de Aseo',exp:3,
-   actividad:'Limpieza de baños y zonas con residuos biológicos',
-   peligro:'Exposición a agentes biológicos (bacterias, hongos, virus)',
-   tipo:'Biológico',riesgo:'Contacto con material contaminado',
-   consecuencia:'Infección, enfermedad ocupacional',
-   ni:'Medio',mr_i:6,nr:'Bajo',mr_r:4,
-   controles:'Sin EPP específico verificado.',
-   accion:'Guantes nitrilo desechables, mascarilla. Procedimiento limpieza 2 tiempos. Vacunación Hep B.',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
-
-  {id:8,area:'Logística / Bodega',zona:'patio',cargo:'Conductor — Ayudante de Bodega',exp:5,
-   actividad:'Conducción de vehículo de reparto / traslado',
-   peligro:'Accidente de tránsito (colisión, atropello, volcamiento)',
-   tipo:'Seguridad vial',riesgo:'Colisión, vuelco, atropello a peatón',
-   consecuencia:'Lesiones graves, muerte',
-   ni:'Crítico',mr_i:15,nr:'Alto',mr_r:10,
-   controles:'NINGUNO documentado. Todos los conductores son NUEVOS sin capacitación.',
-   accion:'Manejo defensivo URGENTE. Revisión técnica y seguro vehículo. Checklist diario. Política fatiga y alcohol.',
-   estado:'CRÍTICO — SIN CONTROLES'},
-
-  {id:9,area:'Logística / Bodega',zona:'bodega',cargo:'Conductor — Ayudante de Bodega',exp:5,
-   actividad:'Carga y descarga manual de rollos y cajas',
-   peligro:'Sobreesfuerzo — manejo manual de cargas pesadas',
-   tipo:'Ergonómico',riesgo:'Lesión lumbar aguda, hernia discal',
-   consecuencia:'Incapacidad temporal o permanente',
-   ni:'Alto',mr_i:12,nr:'Medio',mr_r:9,
-   controles:'Sin capacitación en carga. Sin ayuda mecánica verificada.',
-   accion:'Capacitación manejo de cargas URGENTE. Zorra/stocka. Límite 25 kg individual.',
-   estado:'CRÍTICO — SIN CONTROLES'},
-
-  {id:10,area:'Logística / Bodega',zona:'bodega',cargo:'Conductor — Ayudante de Bodega',exp:5,
-   actividad:'Apilado y desapilado de pallets / rollos en bodega',
-   peligro:'Caída de objetos desde altura (rollos, pallets, cajas)',
-   tipo:'Seguridad',riesgo:'Golpe por caída de material desde estanterías o apilamientos',
-   consecuencia:'Contusión, fractura, lesión grave por aplastamiento',
-   ni:'Alto',mr_i:12,nr:'Medio',mr_r:8,
-   controles:'Sin controles documentados. Sin capacitación en trabajo en bodega.',
-   accion:'Capacitación riesgos bodega URGENTE. Casco en zonas de riesgo. Límite de altura apilamiento.',
-   estado:'CRÍTICO — SIN CONTROLES'},
-
-  {id:11,area:'Logística / Bodega',zona:'bodega',cargo:'Conductor — Ayudante de Bodega',exp:5,
-   actividad:'Acceso a estantes en altura mediante escaleras',
-   peligro:'Caída a distinto nivel desde escalera',
-   tipo:'Seguridad',riesgo:'Caída de altura (≥ 1,5 m)',
-   consecuencia:'Fractura, traumatismo craneoencefálico, muerte',
-   ni:'Alto',mr_i:12,nr:'Medio',mr_r:8,
-   controles:'Sin capacitación en uso seguro de escaleras. Sin EPP verificado.',
-   accion:'Capacitación uso escaleras URGENTE. Escaleras con pie de apoyo y zapatas.',
-   estado:'CRÍTICO — SIN CONTROLES'},
-
-  {id:12,area:'Logística / Bodega',zona:'bodega',cargo:'Conductor — Ayudante de Bodega',exp:5,
-   actividad:'Tránsito peatonal en bodega con equipos de movimiento de carga',
-   peligro:'Atropellamiento / golpe por montacargas, zorra eléctrica',
-   tipo:'Seguridad',riesgo:'Atropellamiento, golpe de equipo de carga',
-   consecuencia:'Lesión grave, amputación, muerte',
-   ni:'Alto',mr_i:12,nr:'Medio',mr_r:6,
-   controles:'Sin demarcación de pasillos. Sin señalética. Sin reglas de tránsito interno.',
-   accion:'Demarcación de pasillos peatonales y de tránsito de equipos. Señalética. Reglas de tránsito interno.',
-   estado:'CRÍTICO — SIN CONTROLES'},
-
-  {id:13,area:'Logística / Bodega',zona:'bodega',cargo:'Conductor — Ayudante de Bodega',exp:5,
-   actividad:'Trabajo en bodega: iluminación y temperatura',
-   peligro:'Condiciones ambientales deficientes (iluminación insuficiente, temperatura extrema)',
-   tipo:'Físico / Ambiental',riesgo:'Accidente por visibilidad reducida; malestar por temperatura',
-   consecuencia:'Lesión por accidente, deshidratación, malestar',
-   ni:'Medio',mr_i:6,nr:'Bajo',mr_r:4,
-   controles:'Sin diagnóstico ambiental.',
-   accion:'Medición de iluminación (mín. 200 lux en bodega). Ventilación. Agua disponible.',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
-
-  {id:14,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
-   actividad:'Operación de máquina rebobinadora',
-   peligro:'Atrapamiento en partes móviles (rodillos, ejes, transmisiones)',
-   tipo:'Mecánico',riesgo:'Atrapamiento de mano o brazo en partes móviles',
-   consecuencia:'Amputación de dedos / mano, lesión grave irreversible',
-   ni:'Crítico',mr_i:15,nr:'Alto',mr_r:10,
-   controles:'Sin guardas documentadas. Sin LOTO verificado.',
-   accion:'Guardas en todos los puntos de atrapamiento URGENTE. Procedimiento LOTO. Botón de parada de emergencia.',
-   estado:'CRÍTICO — SIN CONTROLES'},
-
-  {id:15,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
-   actividad:'Manipulación de rollos de aluminio y PVC (bordes filosos)',
-   peligro:'Corte con bordes de lámina de aluminio o PVC',
-   tipo:'Mecánico',riesgo:'Corte en manos, muñecas o brazos',
-   consecuencia:'Laceración, corte profundo, infección',
-   ni:'Alto',mr_i:12,nr:'Bajo',mr_r:4,
-   controles:'Sin EPP de corte documentado.',
-   accion:'Guantes anticorte nivel 3+ (EN ISO 13997). Capacitación manipulación segura. Procedimiento escrito.',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
-
-  {id:16,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
-   actividad:'Levantamiento y traslado manual de rollos pesados',
-   peligro:'Sobreesfuerzo por manejo manual de cargas',
-   tipo:'Ergonómico',riesgo:'Lesión lumbar aguda, hernia discal',
-   consecuencia:'Incapacidad temporal o permanente',
-   ni:'Alto',mr_i:12,nr:'Medio',mr_r:9,
-   controles:'Sin protocolo de manejo de cargas. Sin ayuda mecánica verificada.',
-   accion:'Protocolo manejo de cargas. Carros portarrollos. Límite de peso (25 kg individual).',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
-
-  {id:17,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
-   actividad:'Operación de rebobinadora con calor (PVC)',
-   peligro:'Peligro químico por PVC — DESCARTADO (proceso sin calor)',
-   tipo:'No aplica',riesgo:'No aplica',
-   consecuencia:'No aplica',
-   ni:'Bajo',mr_i:1,nr:'Bajo',mr_r:1,
-   controles:'Proceso confirmado: sin calor y sin generación de polvo.',
-   accion:'Sin acción requerida. Mantener condición de proceso en frío. Documentar.',
-   estado:'NO APLICA — peligro químico descartado'},
-
-  {id:18,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
-   actividad:'Operación de rebobinadora (jornada completa)',
-   peligro:'Movimientos repetitivos y postura forzada (hombros, muñecas)',
-   tipo:'Ergonómico',riesgo:'Lesión musculoesquelética miembros superiores',
-   consecuencia:'Tendinitis, síndrome del túnel carpiano, enfermedad profesional',
-   ni:'Alto',mr_i:12,nr:'Medio',mr_r:6,
-   controles:'Sin evaluación ergonómica.',
-   accion:'Evaluación ergonómica (OCRA o RULA). Pausas activas. Rotación de tareas. Ajuste de altura.',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
-
-  {id:19,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
-   actividad:'Exposición a ruido de la rebobinadora',
-   peligro:'Ruido de maquinaria por sobre 85 dB(A)',
-   tipo:'Físico',riesgo:'Trauma acústico crónico (hipoacusia)',
-   consecuencia:'Pérdida auditiva parcial o total, enfermedad profesional',
-   ni:'Medio',mr_i:9,nr:'Medio',mr_r:6,
-   controles:'Sin medición de ruido. Sin protección auditiva verificada.',
-   accion:'Medición dosimétrica URGENTE. Si supera 82 dB(A): protectores auditivos + programa conservación auditiva (DS N°44/2024).',
-   estado:'Ruido CONFIRMADO. Pendiente medición dosimétrica.'},
-
-  {id:20,area:'Ventas / Comercial / Retail',zona:'ventas',cargo:'Vendedor(a)',exp:7,
-   actividad:'Atención al público en sala de ventas',
-   peligro:'Violencia externa (clientes agresivos, amenazas, robos)',
-   tipo:'Psicosocial',riesgo:'Agresión verbal o física por parte de clientes',
-   consecuencia:'Lesión psicológica, lesión física, estrés postraumático',
-   ni:'Medio',mr_i:9,nr:'Medio',mr_r:6,
-   controles:'Sin protocolo de manejo de violencia externa.',
-   accion:'Protocolo violencia externa (DS N°44 art.10). Capacitación. Botón de pánico si aplica.',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
-
-  {id:21,area:'Ventas / Comercial / Retail',zona:'ventas',cargo:'Vendedor(a)',exp:7,
-   actividad:'Postura de pie prolongada en sala de ventas',
-   peligro:'Postura de pie estática durante toda la jornada',
-   tipo:'Ergonómico',riesgo:'Fatiga, varices, lesión musculoesquelética extremidades inferiores',
-   consecuencia:'Enfermedad profesional, ausentismo',
-   ni:'Medio',mr_i:8,nr:'Medio',mr_r:6,
-   controles:'Sin evaluación ergonómica. Sin silla de descanso verificada (Ley 2951).',
-   accion:'Silla disponible (Ley 2951). Pausas activas. Calzado adecuado. Alfombra anti-fatiga.',
-   estado:'Borrador para validar'},
-
-  {id:22,area:'Ventas / Comercial',zona:'patio',cargo:'Vendedor(a)',exp:4,
-   actividad:'Desplazamiento a clientes en vehículo (visitas comerciales)',
-   peligro:'Accidente de tránsito',
-   tipo:'Seguridad vial',riesgo:'Colisión, vuelco, atropello',
-   consecuencia:'Lesiones graves, muerte',
-   ni:'Crítico',mr_i:15,nr:'Alto',mr_r:10,
-   controles:'Sin protocolo de conducción segura documentado.',
-   accion:'Política de conducción segura. Revisión técnica al día. Prohibición uso celular al conducir.',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
-
-  {id:23,area:'Ventas / Comercial',zona:'ventas',cargo:'Vendedor(a)',exp:4,
-   actividad:'Trabajo en pantalla (cotizaciones, CRM, correo)',
-   peligro:'Fatiga visual, postura sedente prolongada',
-   tipo:'Ergonómico',riesgo:'Fatiga visual, cefalea, lesión musculoesquelética',
-   consecuencia:'Malestar, ausentismo, enfermedad profesional',
-   ni:'Medio',mr_i:6,nr:'Bajo',mr_r:4,
-   controles:'Sin evaluación ergonómica.',
-   accion:'Evaluación ergonómica. Descanso visual (regla 20-20-20). Silla ajustable.',
-   estado:'Borrador para validar'},
-
-  {id:24,area:'Logística / Bodega',zona:'bodega',cargo:'Subjefe de Logística',exp:1,
-   actividad:'Supervisión en bodega y tránsito por zonas de carga',
-   peligro:'Caída de objetos desde altura (pallets, rollos mal estibados)',
-   tipo:'Seguridad',riesgo:'Golpe por caída de material desde estanterías',
-   consecuencia:'Contusión, fractura, lesión grave',
-   ni:'Medio',mr_i:8,nr:'Medio',mr_r:6,
-   controles:'Sin controles documentados.',
-   accion:'Casco en zonas de bodega. Revisión de estanterías. Límite de altura de apilamiento.',
-   estado:'Borrador para validar'},
-
-  {id:25,area:'Logística / Bodega',zona:'bodega',cargo:'Subjefe de Logística',exp:1,
-   actividad:'Tránsito en bodega con equipos de movimiento de carga',
-   peligro:'Atropellamiento / golpe por equipo de carga',
-   tipo:'Seguridad',riesgo:'Golpe por equipo de movimiento de carga',
-   consecuencia:'Lesión grave, amputación, muerte',
-   ni:'Medio',mr_i:8,nr:'Medio',mr_r:6,
-   controles:'Sin demarcación de pasillos.',
-   accion:'Demarcación de pasillos. Chaleco reflectante. Reglas de tránsito interno.',
-   estado:'Borrador para validar'},
-
-  {id:26,area:'Logística / Bodega',zona:'patio',cargo:'Subjefe de Logística',exp:1,
-   actividad:'Desplazamiento a otros centros o clientes',
-   peligro:'Accidente de tránsito',
-   tipo:'Seguridad vial',riesgo:'Colisión, vuelco',
-   consecuencia:'Lesiones graves, muerte',
-   ni:'Alto',mr_i:10,nr:'Medio',mr_r:8,
-   controles:'Sin protocolo de conducción segura documentado.',
-   accion:'Política de conducción segura. Revisión técnica. Prohibición uso celular.',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
-
-  {id:27,area:'Logística / Bodega',zona:'admin',cargo:'Subjefe de Logística',exp:1,
-   actividad:'Trabajo administrativo (planillas, coordinación)',
-   peligro:'Postura sedente prolongada, fatiga visual',
-   tipo:'Ergonómico',riesgo:'Lesión musculoesquelética, cefalea',
-   consecuencia:'Malestar, enfermedad profesional',
-   ni:'Medio',mr_i:6,nr:'Bajo',mr_r:4,
-   controles:'Sin evaluación ergonómica.',
-   accion:'Evaluación ergonómica. Pausas activas. Silla regulable.',
-   estado:'Borrador para validar'},
-
-  {id:28,area:'Logística Regional (CCP Concepción)',zona:'ccp',cargo:'Encargado de Logística Sur',exp:1,
-   actividad:'Desplazamiento regional (interurbano) en vehículo',
-   peligro:'Accidente de tránsito en ruta interurbana',
-   tipo:'Seguridad vial',riesgo:'Colisión, vuelco, atropello en ruta',
-   consecuencia:'Lesiones graves, muerte',
-   ni:'Crítico',mr_i:15,nr:'Alto',mr_r:10,
-   controles:'Sin protocolo de conducción segura. Sin política de fatiga.',
-   accion:'Política conducción segura. Máx. 5 h continuas. Seguro accidentes. Check-list vehículo.',
-   estado:'CRÍTICO — SIN CONTROLES'},
-
-  {id:29,area:'Logística Regional (CCP Concepción)',zona:'ccp',cargo:'Encargado de Logística Sur',exp:1,
-   actividad:'Coordinación y supervisión en bodega CCP',
-   peligro:'Peligros en bodega CCP — condiciones no auditadas',
-   tipo:'Seguridad',riesgo:'Caída de objetos, golpe, caída al mismo nivel',
-   consecuencia:'Contusión, fractura, lesión moderada a grave',
-   ni:'Medio',mr_i:6,nr:'Medio',mr_r:6,
-   controles:'Sin controles documentados. Condiciones de CCP no auditadas.',
-   accion:'Visita de diagnóstico al centro CCP. Levantar MIPER específica. Mientras: EPP básico.',
-   estado:'REQUIERE VALIDACIÓN TÉCNICA — SITIO NO AUDITADO'},
-
-  {id:30,area:'Logística Regional (CCP Concepción)',zona:'ccp',cargo:'Encargado de Logística Sur',exp:1,
-   actividad:'Carga manual esporádica de materiales',
-   peligro:'Sobreesfuerzo por manejo manual de cargas',
-   tipo:'Ergonómico',riesgo:'Lesión lumbar',
-   consecuencia:'Lumbago, incapacidad temporal',
-   ni:'Medio',mr_i:6,nr:'Bajo',mr_r:4,
-   controles:'Sin protocolo documentado.',
-   accion:'Protocolo manejo manual de cargas. Ayuda mecánica si disponible.',
-   estado:'Borrador para validar'},
+const risks = [
+  {id:1,  proceso:"Administración/RRHH",   peligro:"Postura sedente prolongada",                   nivel:"M",mr:6, zona:"oficinas"},
+  {id:2,  proceso:"Administración/RRHH",   peligro:"Riesgo psicosocial",                            nivel:"M",mr:6, zona:"transversal"},
+  {id:3,  proceso:"Administración/RRHH",   peligro:"Caída mismo nivel (cables/suelo irregular)",    nivel:"M",mr:6, zona:"oficinas"},
+  {id:4,  proceso:"Aseo y Limpieza",       peligro:"Contacto agente químico (productos limpieza)",  nivel:"A",mr:10,zona:"zona-sur"},
+  {id:5,  proceso:"Aseo y Limpieza",       peligro:"Piso mojado / caída mismo nivel",               nivel:"A",mr:10,zona:"zona-sur"},
+  {id:6,  proceso:"Aseo y Limpieza",       peligro:"Sobreesfuerzo / MMC equipo aseo",               nivel:"A",mr:10,zona:"zona-sur"},
+  {id:7,  proceso:"Aseo y Limpieza",       peligro:"Contacto agente biológico (baños)",             nivel:"M",mr:6, zona:"zona-sur"},
+  {id:8,  proceso:"Logística/Bodega",      peligro:"Accidente tránsito / choque colisión conductor",nivel:"C",mr:15,zona:"porton"},
+  {id:9,  proceso:"Logística/Bodega",      peligro:"Sobreesfuerzo / manejo manual de cargas",       nivel:"A",mr:12,zona:"zona-sur"},
+  {id:10, proceso:"Logística/Bodega",      peligro:"Caída de objetos desde racks",                  nivel:"A",mr:10,zona:"racks"},
+  {id:11, proceso:"Logística/Bodega",      peligro:"Caída a distinto nivel (escalera rack)",        nivel:"A",mr:10,zona:"racks"},
+  {id:12, proceso:"Logística/Bodega",      peligro:"Atropellamiento por zorra eléctrica",           nivel:"A",mr:12,zona:"pasillos"},
+  {id:13, proceso:"Logística/Bodega",      peligro:"Iluminación deficiente / temperatura extrema",  nivel:"M",mr:6, zona:"zona-sur"},
+  {id:14, proceso:"Producción/Rollos",     peligro:"Atrapamiento por partes móviles (rebobinadora)",nivel:"C",mr:15,zona:"produccion"},
+  {id:15, proceso:"Producción/Rollos",     peligro:"Caída a distinto nivel plataformas",            nivel:"A",mr:10,zona:"produccion"},
+  {id:16, proceso:"Producción/Rollos",     peligro:"Postura de pie prolongada",                     nivel:"A",mr:10,zona:"produccion"},
+  {id:17, proceso:"Producción/Rollos",     peligro:"Golpe por caída de rollo",                      nivel:"M",mr:6, zona:"produccion"},
+  {id:18, proceso:"Producción/Rollos",     peligro:"Vibración herramientas / cuerpo entero",        nivel:"A",mr:10,zona:"produccion"},
+  {id:19, proceso:"Producción/Rollos",     peligro:"Sobreesfuerzo / MMC rollos",                    nivel:"M",mr:9, zona:"produccion"},
+  {id:20, proceso:"Ventas/Comercial",      peligro:"Riesgo psicosocial (trabajo emocional)",        nivel:"M",mr:6, zona:"transversal"},
+  {id:21, proceso:"Ventas/Comercial",      peligro:"Postura sedente / fatiga visual",               nivel:"M",mr:6, zona:"oficinas"},
+  {id:22, proceso:"Ventas/Comercial",      peligro:"Accidente tránsito / choque colisión vendedor", nivel:"C",mr:15,zona:"porton"},
+  {id:23, proceso:"Ventas/Comercial",      peligro:"Caída mismo nivel terreno externo",             nivel:"M",mr:6, zona:"porton"},
+  {id:24, proceso:"Supervisión Logística", peligro:"Caída de objetos sobre supervisor",             nivel:"A",mr:12,zona:"racks"},
+  {id:25, proceso:"Supervisión Logística", peligro:"Atropellamiento zorra eléctrica (supervisor)",  nivel:"A",mr:10,zona:"pasillos"},
+  {id:26, proceso:"Supervisión Logística", peligro:"Accidente tránsito – supervisión operativa",    nivel:"A",mr:12,zona:"porton"},
+  {id:27, proceso:"Supervisión Logística", peligro:"Postura sedente / pantalla visualización",      nivel:"M",mr:6, zona:"oficinas"},
+  {id:28, proceso:"Logística Regional",    peligro:"Accidente tránsito interurbano CCP Concepción", nivel:"C",mr:15,zona:"porton"},
+  {id:29, proceso:"Logística Regional",    peligro:"Condiciones de trabajo distintas sede CCP",     nivel:"M",mr:6, zona:"zona-sur"},
+  {id:30, proceso:"Logística Regional",    peligro:"Sobreesfuerzo / MMC regional CCP",              nivel:"M",mr:9, zona:"zona-sur"}
 ];
 
-function nivelBadgeClass(nivel){
-  if(nivel==='Crítico') return 'nb-critico';
-  if(nivel==='Alto') return 'nb-alto';
-  if(nivel==='Medio') return 'nb-medio';
-  return 'nb-bajo';
-}
-function nivelChipClass(nivel){
-  if(nivel==='Crítico') return 'nc-critico';
-  if(nivel==='Alto') return 'nc-alto';
-  if(nivel==='Medio') return 'nc-medio';
-  return 'nc-bajo';
-}
-function nivelColor(nivel){
-  if(nivel==='Crítico') return '#c0392b';
-  if(nivel==='Alto') return '#e67e22';
-  if(nivel==='Medio') return '#d4ac0d';
-  return '#27ae60';
-}
-
-function renderTabla(filtroNivel){
-  const tbody = document.getElementById('tabla-body');
-  tbody.innerHTML = '';
-  riesgos.forEach(r => {
-    if(filtroNivel !== 'todos' && r.ni !== filtroNivel) return;
-    const tr = document.createElement('tr');
-    const esRojo = r.estado.includes('CRÍTICO') || r.estado.includes('REQUIERE VALIDACIÓN') || r.estado.includes('NO AUDITADO');
-    tr.innerHTML = `
-      <td style="font-weight:700">${r.id}</td>
-      <td>${r.area}</td>
-      <td>${r.cargo} <small style="color:#888">(${r.exp})</small></td>
-      <td>${r.actividad}</td>
-      <td>${r.peligro}</td>
-      <td><span style="background:#eef0f3;padding:1px 5px;border-radius:3px;font-size:10px">${r.tipo}</span></td>
-      <td>${r.riesgo}</td>
-      <td style="font-size:10px;color:#666">${r.consecuencia}</td>
-      <td class="nivel-cell"><span class="nivel-badge ${nivelBadgeClass(r.ni)}">${r.ni}</span><div style="font-size:9px;color:#888;margin-top:2px">MR ${r.mr_i}</div></td>
-      <td class="nivel-cell"><span class="nivel-badge ${nivelBadgeClass(r.nr)}">${r.nr}</span><div style="font-size:9px;color:#888;margin-top:2px">MR ${r.mr_r}</div></td>
-      <td style="font-size:10px;color:#555">${r.controles}</td>
-      <td style="font-size:10px;color:#1a6dad">${r.accion}</td>
-      <td class="${esRojo ? 'observ-rojo' : 'observ-normal'}">${r.estado}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function filtrar(nivel, btn){
-  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderTabla(nivel);
-}
-
-const zonaNames = {
-  patio:'&#x1F6A7; Patio de Carga / Acceso / Vía Pública',
-  bodega:'&#x1F4E6; Bodega / Almacenamiento',
-  produccion:'&#x2699;&#xFE0F; Producción / Envasado',
-  aseo:'&#x1F9F9; Aseo y Limpieza',
-  ventas:'&#x1F6D2; Sala de Ventas / Retail',
-  admin:'&#x1F5A5;&#xFE0F; Administración / RRHH',
-  ccp:'&#x1F4CD; CCP Concepción (sitio no auditado)',
+const simbolos = {
+  S1:  {label:"Riesgo Psicosocial",                   ids:[2,20]},
+  S2:  {label:"Caída de objetos desde rack",           ids:[10]},
+  S3:  {label:"Caída a distinto nivel (escalera rack)",ids:[11]},
+  S4:  {label:"Caída de objetos (Supervisor)",         ids:[24]},
+  S5:  {label:"Vehículo en movimiento (zorra)",        ids:[12,25]},
+  S6:  {label:"MMC / Sobreesfuerzo carga",             ids:[9]},
+  S7:  {label:"Iluminación / Temperatura",             ids:[13]},
+  S8:  {label:"Choque, colisión o volcamiento",        ids:[8,26]},
+  S9:  {label:"Ergonómico Sedente",                    ids:[1,27]},
+  S10: {label:"Caída mismo nivel (oficinas)",          ids:[3]},
+  S11: {label:"Atrapamiento mecánico (rebobinadora)",  ids:[14]},
+  S12: {label:"Ergon./MMC/Vibración – Producción",     ids:[15,16,18,19]},
+  S13: {label:"Agente Químico (aseo)",                 ids:[4]},
+  S14: {label:"Piso mojado / caída mismo nivel",       ids:[5]},
+  S15: {label:"MMC – Aseo",                            ids:[6]},
+  S16: {label:"Agente Biológico",                      ids:[7]},
+  S17: {label:"Accidente tránsito – Ruta",             ids:[22,28]}
 };
 
-function mostrarZona(zona){
-  const panel = document.getElementById('zona-detail');
-  const risks = riesgos.filter(r => r.zona === zona);
-  if(!risks.length) return;
-  let html = `<h2>${zonaNames[zona]}</h2>`;
-  risks.forEach(r => {
-    const clr = nivelColor(r.ni);
-    const cls = nivelChipClass(r.ni);
-    html += `
-      <div class="risk-card" style="border-left-color:${clr}">
-        <div class="risk-num">Riesgo #${r.id} — ${r.tipo}</div>
-        <div class="risk-title">${r.peligro}<span class="nivel-chip ${cls}">${r.ni} MR${r.mr_i}</span></div>
-        <div class="risk-meta">&#x1F477; ${r.cargo} (${r.exp} exp.) | ${r.actividad}<br>&#x26A1; ${r.riesgo}<br>&#x1F915; ${r.consecuencia}</div>
-        <div class="risk-control">&#x26A0; ${r.controles}</div>
-        <div class="risk-action">&#x2713; ${r.accion}</div>
-      </div>`;
+const lvlLabel = {C:"Crítico",A:"Alto",M:"Medio",B:"Bajo"};
+const lvlColor = {C:"#c0392b",A:"#e67e22",M:"#f1c40f",B:"#27ae60"};
+const zonaLabel = {transversal:"Transversal",racks:"Racks",pasillos:"Pasillos","zona-sur":"Zona Sur/Carga",porton:"Portón/Exterior",oficinas:"Oficinas",produccion:"Producción*"};
+
+function renderTable(list) {
+  const tb = document.getElementById("riskTbody");
+  tb.innerHTML = "";
+  (list||risks).forEach(r => {
+    const tr = document.createElement("tr");
+    tr.dataset.id=r.id; tr.dataset.nivel=r.nivel; tr.dataset.zona=r.zona; tr.dataset.proceso=r.proceso;
+    tr.innerHTML = `<td style="font-weight:700;color:#1e3a5f">R${r.id}</td><td style="font-size:11px">${r.proceso}</td><td>${r.peligro}</td><td><span class="lvl-badge lvl-${r.nivel}">${lvlLabel[r.nivel]}</span></td><td style="font-weight:700;color:${lvlColor[r.nivel]}">${r.mr}</td><td style="font-size:11px">${zonaLabel[r.zona]||r.zona}</td>`;
+    tb.appendChild(tr);
   });
-  panel.innerHTML = html;
-  document.querySelectorAll('.zona').forEach(z => z.classList.remove('selected'));
-  const el = document.querySelector(`.zona[data-zona="${zona}"]`);
-  if(el) el.classList.add('selected');
+}
+renderTable();
+
+function applyFilters() {
+  const n=document.getElementById("filter-nivel").value,
+        z=document.getElementById("filter-zona").value,
+        p=document.getElementById("filter-proceso").value,
+        t=document.getElementById("filter-text").value.toLowerCase();
+  document.querySelectorAll("#riskTbody tr").forEach(tr=>{
+    let ok=true;
+    if(n&&tr.dataset.nivel!==n)ok=false;
+    if(z&&tr.dataset.zona!==z)ok=false;
+    if(p&&tr.dataset.proceso!==p)ok=false;
+    if(t&&!tr.innerText.toLowerCase().includes(t))ok=false;
+    tr.classList.toggle("hidden",!ok);
+  });
+}
+["filter-nivel","filter-zona","filter-proceso"].forEach(id=>document.getElementById(id).addEventListener("change",applyFilters));
+document.getElementById("filter-text").addEventListener("input",applyFilters);
+function resetFilters(){["filter-nivel","filter-zona","filter-proceso"].forEach(id=>document.getElementById(id).value="");document.getElementById("filter-text").value="";applyFilters();}
+
+function highlightRisks(ids) {
+  document.querySelectorAll("#riskTbody tr").forEach(tr=>{
+    tr.classList.remove("row-highlighted");
+    if(ids.includes(parseInt(tr.dataset.id)))tr.classList.add("row-highlighted");
+  });
+  const first=document.querySelector("#riskTbody tr.row-highlighted");
+  if(first)first.scrollIntoView({behavior:"smooth",block:"nearest"});
+  document.querySelectorAll(".risk-symbol").forEach(el=>{
+    el.classList.remove("highlighted");
+    const elIds=el.dataset.ids.split(",").map(Number);
+    if(elIds.some(i=>ids.includes(i)))el.classList.add("highlighted");
+  });
 }
 
-document.querySelectorAll('.zona').forEach(zona => {
-  zona.addEventListener('click', function(){ mostrarZona(this.dataset.zona); });
-  zona.addEventListener('mouseenter', function(e){
-    const z = this.dataset.zona;
-    const risks = riesgos.filter(r => r.zona === z);
-    const cr = risks.filter(r => r.ni === 'Crítico').length;
-    const al = risks.filter(r => r.ni === 'Alto').length;
-    const tt = document.getElementById('tooltip');
-    tt.innerHTML = `<strong>${zonaNames[z]}</strong><br>${risks.length} riesgos | ${cr} críticos | ${al} altos`;
-    tt.style.display = 'block';
+function showTip(e,sid){
+  const s=simbolos[sid]; if(!s)return;
+  const rr=risks.filter(r=>s.ids.includes(r.id));
+  let html=`<strong>${s.label}</strong>`;
+  rr.forEach(r=>{
+    const ls=`background:${lvlColor[r.nivel]};${r.nivel==="M"?"color:#333;":""}`;
+    html+=`<div style="margin-top:5px"><span class="tip-level" style="${ls}">${lvlLabel[r.nivel]} MR=${r.mr}</span> R${r.id} · ${r.proceso}<br><span style="font-size:11px;opacity:.85">${r.peligro}</span></div>`;
   });
-  zona.addEventListener('mousemove', function(e){
-    const tt = document.getElementById('tooltip');
-    tt.style.left = (e.clientX + 14) + 'px';
-    tt.style.top = (e.clientY + 14) + 'px';
-  });
-  zona.addEventListener('mouseleave', function(){ document.getElementById('tooltip').style.display = 'none'; });
-});
-
-renderTabla('todos');
-mostrarZona('bodega');
+  const tip=document.getElementById("tooltip");
+  tip.innerHTML=html; tip.style.display="block"; moveTip(e);
+}
+function hideTip(){document.getElementById("tooltip").style.display="none";}
+document.addEventListener("mousemove",moveTip);
+function moveTip(e){
+  const tip=document.getElementById("tooltip"); if(tip.style.display==="none")return;
+  let x=e.clientX+16,y=e.clientY+16;
+  if(x+300>window.innerWidth)x=e.clientX-300;
+  if(y+220>window.innerHeight)y=e.clientY-220;
+  tip.style.left=x+"px"; tip.style.top=y+"px";
+}
 </script>
 </body>
 </html>
