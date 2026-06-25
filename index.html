@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa de Riesgos â PyP Pack | Bodega/Planta Santiago</title>
+<style>
+  :root {
+    --critico: #c0392b;
+    --alto: #e67e22;
+    --medio: #f1c40f;
+    --bajo: #27ae60;
+    --sin-dato: #95a5a6;
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --text: #2c3e50;
+    --border: #dde1e7;
+    --header-bg: #1a252f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
+
+  .header { background: var(--header-bg); color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .header h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.3px; }
+  .header .meta { font-size: 11px; color: #bdc3c7; margin-top: 3px; }
+  .badge-borrador { background: #e74c3c; color: #fff; font-size: 10px; padding: 3px 8px; border-radius: 3px; font-weight: 700; letter-spacing: 1px; }
+
+  .main { display: grid; grid-template-columns: 1fr 340px; gap: 16px; padding: 16px; }
+  @media (max-width: 960px) { .main { grid-template-columns: 1fr; } }
+
+  .plano-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .plano-wrap h2 { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+
+  svg#plano { width: 100%; height: auto; display: block; }
+  .zona { cursor: pointer; transition: opacity 0.15s; }
+  .zona:hover { opacity: 0.82; }
+  .zona.selected { stroke-width: 3 !important; stroke: #2c3e50 !important; }
+  .zona-label { font-size: 10px; font-weight: 700; fill: #fff; text-anchor: middle; pointer-events: none; }
+  .zona-sublabel { font-size: 8px; fill: rgba(255,255,255,0.9); text-anchor: middle; pointer-events: none; }
+  .zona-badge { font-size: 8.5px; font-weight: 700; fill: #fff; text-anchor: middle; pointer-events: none; }
+
+  .side-panel { display: flex; flex-direction: column; gap: 14px; }
+
+  .legend { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .legend h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+  .legend-range { font-size: 10px; color: #7f8c8d; margin-left: auto; }
+
+  .stats { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .stats h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card { border-radius: 6px; padding: 10px 12px; }
+  .stat-card .num { font-size: 22px; font-weight: 800; color: #fff; line-height: 1; }
+  .stat-card .lbl { font-size: 10px; color: rgba(255,255,255,0.85); margin-top: 2px; }
+  .sc-critico { background: var(--critico); }
+  .sc-alto { background: var(--alto); }
+  .sc-medio { background: #d4ac0d; }
+  .sc-bajo { background: var(--bajo); }
+
+  .zona-detail { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; max-height: 420px; overflow-y: auto; }
+  .zona-detail h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .zona-detail .hint { font-size: 11px; color: #7f8c8d; font-style: italic; }
+  .risk-card { border-left: 4px solid #dde; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #fafbfc; }
+  .risk-card .risk-num { font-size: 9px; font-weight: 700; color: #7f8c8d; text-transform: uppercase; }
+  .risk-card .risk-title { font-size: 12px; font-weight: 700; margin: 2px 0 4px; }
+  .risk-card .risk-meta { font-size: 10px; color: #555; line-height: 1.5; }
+  .risk-card .risk-control { font-size: 10px; color: #c0392b; margin-top: 4px; font-style: italic; }
+  .risk-card .risk-action { font-size: 10px; color: #1a6dad; margin-top: 3px; }
+  .nivel-chip { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 9px; font-weight: 700; color: #fff; margin-left: 6px; }
+  .nc-critico { background: var(--critico); }
+  .nc-alto { background: var(--alto); }
+  .nc-medio { background: #d4ac0d; }
+  .nc-bajo { background: var(--bajo); }
+
+  .tabla-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 0 16px 16px; }
+  .tabla-wrap h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+  .filtros { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .filtro-btn { padding: 4px 12px; border-radius: 4px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 11px; font-weight: 600; transition: all 0.15s; }
+  .filtro-btn:hover { background: #eaf0fb; }
+  .filtro-btn.active { color: #fff; border-color: transparent; }
+  .fb-todos.active { background: #2c3e50; }
+  .fb-critico.active { background: var(--critico); }
+  .fb-alto.active { background: var(--alto); }
+  .fb-medio.active { background: #d4ac0d; }
+  .fb-bajo.active { background: var(--bajo); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { background: #2c3e50; color: #fff; padding: 7px 8px; text-align: left; font-weight: 600; white-space: nowrap; }
+  td { padding: 6px 8px; border-bottom: 1px solid #eef0f3; vertical-align: top; }
+  tr:hover td { background: #f0f4ff; }
+  .nivel-cell { text-align: center; }
+  .nivel-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 9px; font-weight: 700; color: #fff; }
+  .nb-critico { background: var(--critico); }
+  .nb-alto { background: var(--alto); }
+  .nb-medio { background: #d4ac0d; }
+  .nb-bajo { background: var(--bajo); }
+  .observ-rojo { color: var(--critico); font-weight: 700; font-size: 10px; }
+  .observ-normal { font-size: 10px; color: #777; }
+
+  .footer { background: var(--header-bg); color: #aaa; font-size: 10px; padding: 10px 24px; text-align: center; margin-top: 8px; }
+  .tooltip { position: fixed; background: rgba(0,0,0,0.88); color: #fff; padding: 6px 10px; border-radius: 5px; font-size: 11px; pointer-events: none; z-index: 999; max-width: 220px; display: none; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>&#x1F5FA; Mapa de Riesgos Laborales &#x2014; PyP Pack | Bodega / Planta Santiago</h1>
+    <div class="meta">MIPER fuente: MIPER_PyP_Pack_Bodega_Santiago_2026-06.xlsx &nbsp;|&nbsp; Versi&#xF3;n 1.0 &nbsp;|&nbsp; 2026-06-24 &nbsp;|&nbsp; DS N&#xB0;44/2024 &nbsp;|&nbsp; 30 riesgos &nbsp;|&nbsp; 6 cargos</div>
+  </div>
+  <div class="badge-borrador">&#x26A0; BORRADOR &#x2014; REQUIERE VALIDACI&#xD3;N T&#xC9;CNICA</div>
+</div>
+
+<div class="main">
+  <div class="plano-wrap">
+    <h2>&#x1F4CD; Plano esquem&#xE1;tico &#x2014; haz clic en una zona para ver sus riesgos</h2>
+    <svg id="plano" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg">
+
+      <rect x="0" y="0" width="700" height="520" fill="#ecf0f1" rx="6"/>
+      <text x="350" y="16" font-size="9.5" fill="#7f8c8d" text-anchor="middle" font-family="Arial">PyP Pack &#x2014; Bodega / Planta Santiago (plano esquem&#xE1;tico sin escala)</text>
+
+      <!-- PATIO CARGA / EXTERIOR -->
+      <rect class="zona" id="z-patio" data-zona="patio" x="10" y="22" width="680" height="82" fill="#c0392b" stroke="#922b21" stroke-width="1.5" rx="4" opacity="0.90"/>
+      <text class="zona-label" x="350" y="52">PATIO DE CARGA / ACCESO / V&#xCD;A P&#xDA;BLICA</text>
+      <text class="zona-sublabel" x="350" y="66">Conductor-Ayudante &#xB7; Vendedor(a) &#xB7; Subjefe Log&#xED;stica</text>
+      <text class="zona-badge" x="350" y="82">&#x1F534; CR&#xCD;TICO &#x2014; R8 R22 R26 &#x2014; Accidente tr&#xE1;nsito / Sin manejo defensivo documentado</text>
+
+      <!-- BODEGA / ALMACÉN -->
+      <rect class="zona" id="z-bodega" data-zona="bodega" x="10" y="114" width="420" height="200" fill="#e67e22" stroke="#ca6f1e" stroke-width="1.5" rx="4" opacity="0.92"/>
+      <text class="zona-label" x="220" y="142">BODEGA / ALMACENAMIENTO</text>
+      <text class="zona-sublabel" x="220" y="156">Conductor-Ayudante de Bodega (5) &#xB7; Subjefe Log&#xED;stica (1)</text>
+      <text class="zona-badge" x="220" y="170">&#x1F7E0; ALTO &#x2014; R9 R10 R11 R12 R13 R24 R25 &#x2014; Sin demarcaci&#xF3;n ni capacitaci&#xF3;n</text>
+      <!-- Estanterías -->
+      <rect x="25" y="185" width="52" height="110" fill="rgba(0,0,0,0.13)" rx="2"/>
+      <rect x="87" y="185" width="52" height="110" fill="rgba(0,0,0,0.13)" rx="2"/>
+      <rect x="149" y="185" width="52" height="110" fill="rgba(0,0,0,0.13)" rx="2"/>
+      <rect x="211" y="185" width="52" height="110" fill="rgba(0,0,0,0.13)" rx="2"/>
+      <rect x="273" y="185" width="52" height="110" fill="rgba(0,0,0,0.13)" rx="2"/>
+      <text x="170" y="248" font-size="9" fill="rgba(255,255,255,0.55)" text-anchor="middle">[ Estanter&#xED;as ]</text>
+      <!-- Zorra -->
+      <rect x="345" y="248" width="50" height="30" fill="rgba(0,0,0,0.22)" rx="3"/>
+      <text x="370" y="268" font-size="8" fill="rgba(255,255,255,0.85)" text-anchor="middle">Zorra</text>
+      <!-- Pasillo -->
+      <rect x="10" y="314" width="420" height="20" fill="rgba(255,255,255,0.28)" stroke="rgba(255,255,255,0.45)" stroke-width="1" rx="2"/>
+      <text x="220" y="328" font-size="7.5" fill="rgba(255,255,255,0.95)" text-anchor="middle" font-weight="700">&#x25C5; PASILLO PEATONAL / TR&#xC1;NSITO EQUIPOS &#x2014; SIN DEMARCACI&#xD3;N &#x25BA;</text>
+
+      <!-- PRODUCCIÓN / ENVASADO -->
+      <rect class="zona" id="z-produccion" data-zona="produccion" x="440" y="114" width="250" height="200" fill="#c0392b" stroke="#922b21" stroke-width="1.5" rx="4" opacity="0.92"/>
+      <text class="zona-label" x="565" y="142">PRODUCCI&#xD3;N / ENVASADO</text>
+      <text class="zona-sublabel" x="565" y="156">Operario Envasado (2)</text>
+      <text class="zona-badge" x="565" y="170">&#x1F534; CR&#xCD;TICO &#x2014; R14 R15 R16 R18 R19</text>
+      <!-- Rebobinadora -->
+      <ellipse cx="565" cy="242" rx="58" ry="40" fill="rgba(0,0,0,0.22)" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+      <text x="565" y="239" font-size="9" fill="rgba(255,255,255,0.95)" text-anchor="middle" font-weight="700">REBOBINADORA</text>
+      <text x="565" y="252" font-size="7.5" fill="rgba(255,255,255,0.75)" text-anchor="middle">&#x26A0; Sin guardas &#xB7; Sin LOTO</text>
+      <!-- Advertencia -->
+      <rect x="478" y="290" width="90" height="16" fill="rgba(0,0,0,0.28)" rx="2"/>
+      <text x="523" y="302" font-size="8" fill="#f39c12" text-anchor="middle" font-weight="700">&#x26A0; Atrapamiento CR&#xCD;TICO</text>
+
+      <!-- ASEO / LIMPIEZA -->
+      <rect class="zona" id="z-aseo" data-zona="aseo" x="10" y="344" width="200" height="100" fill="#e67e22" stroke="#ca6f1e" stroke-width="1.5" rx="4" opacity="0.90"/>
+      <text class="zona-label" x="110" y="376">ASEO / LIMPIEZA</text>
+      <text class="zona-sublabel" x="110" y="390">Auxiliar de Aseo (3)</text>
+      <text class="zona-badge" x="110" y="408">&#x1F7E0; ALTO &#x2014; R4 R5 R6 R7</text>
+
+      <!-- SALA DE VENTAS / RETAIL -->
+      <rect class="zona" id="z-ventas" data-zona="ventas" x="220" y="344" width="210" height="100" fill="#d4ac0d" stroke="#b7950b" stroke-width="1.5" rx="4" opacity="0.92"/>
+      <text class="zona-label" x="325" y="376">SALA DE VENTAS / RETAIL</text>
+      <text class="zona-sublabel" x="325" y="390">Vendedor(a) (7)</text>
+      <text class="zona-badge" x="325" y="408">&#x1F7E1; MEDIO &#x2014; R20 R21 R23</text>
+      <rect x="240" y="400" width="172" height="26" fill="rgba(0,0,0,0.12)" rx="2"/>
+      <text x="326" y="417" font-size="8" fill="rgba(255,255,255,0.8)" text-anchor="middle">[ Mostrador atenci&#xF3;n ]</text>
+
+      <!-- ADMINISTRACIÓN / RRHH -->
+      <rect class="zona" id="z-admin" data-zona="admin" x="440" y="344" width="250" height="100" fill="#d4ac0d" stroke="#b7950b" stroke-width="1.5" rx="4" opacity="0.92"/>
+      <text class="zona-label" x="565" y="376">ADMINISTRACI&#xD3;N / RRHH</text>
+      <text class="zona-sublabel" x="565" y="390">Asistente RRHH (1) &#xB7; Subjefe Log&#xED;stica (1)</text>
+      <text class="zona-badge" x="565" y="408">&#x1F7E1; MEDIO &#x2014; R1 R2 R3 R27</text>
+
+      <!-- CCP CONCEPCIÓN -->
+      <rect class="zona" id="z-ccp" data-zona="ccp" x="10" y="454" width="680" height="56" fill="#c0392b" stroke="#922b21" stroke-width="1.5" rx="4" opacity="0.80"/>
+      <text class="zona-label" x="350" y="478">CCP &#x2014; CONCEPCI&#xD3;N (SITIO NO AUDITADO)</text>
+      <text class="zona-sublabel" x="350" y="494">Encargado Log&#xED;stica Sur (1) &#x2014; R28 R29 R30 &#x2014; REQUIERE VALIDACI&#xD3;N T&#xC9;CNICA ANTES DE USAR</text>
+
+    </svg>
+  </div>
+
+  <div class="side-panel">
+    <div class="stats">
+      <h2>&#x1F4CA; Resumen por nivel (evaluaci&#xF3;n inicial)</h2>
+      <div class="stats-grid">
+        <div class="stat-card sc-critico"><div class="num">4</div><div class="lbl">Cr&#xED;ticos (MR 15&#x2013;25)</div></div>
+        <div class="stat-card sc-alto"><div class="num">10</div><div class="lbl">Altos (MR 10&#x2013;14)</div></div>
+        <div class="stat-card sc-medio"><div class="num">14</div><div class="lbl">Medios (MR 5&#x2013;9)</div></div>
+        <div class="stat-card sc-bajo"><div class="num">2</div><div class="lbl">Bajos (MR 1&#x2013;4)</div></div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:#e74c3c;font-weight:600;">&#x26A0; 4 riesgos cr&#xED;ticos SIN controles documentados</div>
+    </div>
+
+    <div class="legend">
+      <h2>&#x1F6A8; Leyenda</h2>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--critico)"></div> Cr&#xED;tico &#x2014; Acci&#xF3;n inmediata <span class="legend-range">MR 15&#x2013;25</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--alto)"></div> Alto &#x2014; Acci&#xF3;n urgente <span class="legend-range">MR 10&#x2013;14</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#d4ac0d"></div> Medio &#x2014; Mejorar controles <span class="legend-range">MR 5&#x2013;9</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--bajo)"></div> Bajo &#x2014; Mantener controles <span class="legend-range">MR 1&#x2013;4</span></div>
+      <hr style="margin:8px 0;border-color:var(--border)">
+      <div style="font-size:10px;color:#7f8c8d;line-height:1.6">
+        Color de zona = nivel m&#xE1;s alto presente en esa &#xE1;rea.<br>
+        Escala: MR = P &#xD7; C (DS N&#xB0;44/2024).
+      </div>
+    </div>
+
+    <div class="zona-detail" id="zona-detail">
+      <h2>&#x1F4CB; Detalle por zona</h2>
+      <p class="hint">Haz clic en una zona del plano para ver sus riesgos.</p>
+    </div>
+  </div>
+</div>
+
+<div class="tabla-wrap">
+  <h2>&#x1F4CB; Tabla completa &#x2014; PyP Pack | Bodega/Planta Santiago | 30 riesgos</h2>
+  <div class="filtros">
+    <button class="filtro-btn fb-todos active" onclick="filtrar('todos',this)">Todos (30)</button>
+    <button class="filtro-btn fb-critico" onclick="filtrar('Crítico',this)">&#x1F534; Cr&#xED;ticos (4)</button>
+    <button class="filtro-btn fb-alto" onclick="filtrar('Alto',this)">&#x1F7E0; Altos (10)</button>
+    <button class="filtro-btn fb-medio" onclick="filtrar('Medio',this)">&#x1F7E1; Medios (14)</button>
+    <button class="filtro-btn fb-bajo" onclick="filtrar('Bajo',this)">&#x1F7E2; Bajos (2)</button>
+  </div>
+  <div style="overflow-x:auto">
+  <table id="tabla-riesgos">
+    <thead>
+      <tr>
+        <th>#</th><th>&#xC1;rea / Proceso</th><th>Cargo</th><th>Actividad</th>
+        <th>Peligro</th><th>Tipo</th><th>Riesgo / Evento</th><th>Consecuencia</th>
+        <th>Nivel Inicial</th><th>Nivel Residual</th>
+        <th>Controles existentes</th><th>Acci&#xF3;n requerida</th><th>Estado</th>
+      </tr>
+    </thead>
+    <tbody id="tabla-body"></tbody>
+  </table>
+  </div>
+</div>
+
+<div class="footer">
+  Mapa de Riesgos &#x2014; PyP Pack | Bodega / Planta Santiago | MIPER v1.0 | 2026-06-24 | DS N&#xB0;44/2024 &nbsp;|&nbsp;
+  <strong style="color:#e74c3c">BORRADOR &#x2014; No usar como documento definitivo sin revisi&#xF3;n de prevencionista, jefatura y trabajadores expuestos.</strong>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const riesgos = [
+  {id:1,area:'Administración / RRHH',zona:'admin',cargo:'Asistente de RRHH',exp:1,
+   actividad:'Trabajo en computador (largas jornadas)',
+   peligro:'Postura sedente prolongada; uso intensivo de pantallas',
+   tipo:'Ergonómico',riesgo:'Lesión musculoesquelética (columna, cuello, muñecas); fatiga visual',
+   consecuencia:'Enfermedad profesional, dolor crónico, ausentismo',
+   ni:'Medio',mr_i:8,nr:'Medio',mr_r:6,
+   controles:'Escritorio y silla (regulabilidad no verificada). Sin programa ergonómico.',
+   accion:'Evaluación ergonómica. Pausas activas. Silla ergonómica certificada.',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
+
+  {id:2,area:'Administración / RRHH',zona:'admin',cargo:'Asistente de RRHH',exp:1,
+   actividad:'Gestión de personal, atención de conflictos laborales',
+   peligro:'Estrés laboral, carga mental excesiva',
+   tipo:'Psicosocial',riesgo:'Síndrome de burnout, trastorno ansioso-depresivo',
+   consecuencia:'Ausentismo, enfermedad profesional, accidente por distracción',
+   ni:'Medio',mr_i:6,nr:'Medio',mr_r:6,
+   controles:'Sin controles psicosociales documentados.',
+   accion:'Evaluación ISTAS21/SUSESO. Canales de comunicación. Apoyo de jefatura.',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
+
+  {id:3,area:'Administración / RRHH',zona:'admin',cargo:'Asistente de RRHH',exp:1,
+   actividad:'Desplazamiento en instalaciones',
+   peligro:'Caída al mismo nivel (piso húmedo, cables, desniveles)',
+   tipo:'Seguridad',riesgo:'Resbalón, tropezón, caída',
+   consecuencia:'Esguince, fractura, contusión',
+   ni:'Bajo',mr_i:4,nr:'Bajo',mr_r:2,
+   controles:'Sin señalización de piso húmedo verificada.',
+   accion:'Señalización de zonas de riesgo. Orden y limpieza. Calzado antideslizante.',
+   estado:'Borrador para validar'},
+
+  {id:4,area:'Aseo y Limpieza',zona:'aseo',cargo:'Auxiliar de Aseo',exp:3,
+   actividad:'Aplicación de productos de limpieza',
+   peligro:'Exposición a sustancias químicas irritantes / corrosivas',
+   tipo:'Químico',riesgo:'Contacto dérmico u ocular; inhalación de vapores',
+   consecuencia:'Dermatitis, irritación ocular, daño respiratorio',
+   ni:'Alto',mr_i:12,nr:'Medio',mr_r:6,
+   controles:'Guantes (uso no verificado). Sin HDS disponibles. Sin ventilación forzada.',
+   accion:'HDS disponibles. Guantes nitrilo, antiparras. Capacitación manejo químicos. Ventilación.',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
+
+  {id:5,area:'Aseo y Limpieza',zona:'aseo',cargo:'Auxiliar de Aseo',exp:3,
+   actividad:'Lavado y limpieza de pisos',
+   peligro:'Caída al mismo nivel — piso mojado / resbaladizo',
+   tipo:'Seguridad',riesgo:'Resbalón y caída',
+   consecuencia:'Fractura, traumatismo, contusión',
+   ni:'Alto',mr_i:12,nr:'Medio',mr_r:6,
+   controles:'Señalética de piso mojado (no verificada).',
+   accion:'Señalética visible. Calzado antideslizante. Delimitar zona húmeda.',
+   estado:'Borrador para validar'},
+
+  {id:6,area:'Aseo y Limpieza',zona:'aseo',cargo:'Auxiliar de Aseo',exp:3,
+   actividad:'Levantamiento y traslado de baldes, equipos de limpieza',
+   peligro:'Sobreesfuerzo por manejo manual de cargas',
+   tipo:'Ergonómico',riesgo:'Lesión lumbar aguda',
+   consecuencia:'Lumbago, hernia discal, incapacidad temporal',
+   ni:'Medio',mr_i:9,nr:'Bajo',mr_r:4,
+   controles:'Sin protocolo de manejo manual de cargas documentado.',
+   accion:'Protocolo manejo manual de cargas (Ley 20.949). Carros de transporte. Capacitación.',
+   estado:'Borrador para validar'},
+
+  {id:7,area:'Aseo y Limpieza',zona:'aseo',cargo:'Auxiliar de Aseo',exp:3,
+   actividad:'Limpieza de baños y zonas con residuos biológicos',
+   peligro:'Exposición a agentes biológicos (bacterias, hongos, virus)',
+   tipo:'Biológico',riesgo:'Contacto con material contaminado',
+   consecuencia:'Infección, enfermedad ocupacional',
+   ni:'Medio',mr_i:6,nr:'Bajo',mr_r:4,
+   controles:'Sin EPP específico verificado.',
+   accion:'Guantes nitrilo desechables, mascarilla. Procedimiento limpieza 2 tiempos. Vacunación Hep B.',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
+
+  {id:8,area:'Logística / Bodega',zona:'patio',cargo:'Conductor — Ayudante de Bodega',exp:5,
+   actividad:'Conducción de vehículo de reparto / traslado',
+   peligro:'Accidente de tránsito (colisión, atropello, volcamiento)',
+   tipo:'Seguridad vial',riesgo:'Colisión, vuelco, atropello a peatón',
+   consecuencia:'Lesiones graves, muerte',
+   ni:'Crítico',mr_i:15,nr:'Alto',mr_r:10,
+   controles:'NINGUNO documentado. Todos los conductores son NUEVOS sin capacitación.',
+   accion:'Manejo defensivo URGENTE. Revisión técnica y seguro vehículo. Checklist diario. Política fatiga y alcohol.',
+   estado:'CRÍTICO — SIN CONTROLES'},
+
+  {id:9,area:'Logística / Bodega',zona:'bodega',cargo:'Conductor — Ayudante de Bodega',exp:5,
+   actividad:'Carga y descarga manual de rollos y cajas',
+   peligro:'Sobreesfuerzo — manejo manual de cargas pesadas',
+   tipo:'Ergonómico',riesgo:'Lesión lumbar aguda, hernia discal',
+   consecuencia:'Incapacidad temporal o permanente',
+   ni:'Alto',mr_i:12,nr:'Medio',mr_r:9,
+   controles:'Sin capacitación en carga. Sin ayuda mecánica verificada.',
+   accion:'Capacitación manejo de cargas URGENTE. Zorra/stocka. Límite 25 kg individual.',
+   estado:'CRÍTICO — SIN CONTROLES'},
+
+  {id:10,area:'Logística / Bodega',zona:'bodega',cargo:'Conductor — Ayudante de Bodega',exp:5,
+   actividad:'Apilado y desapilado de pallets / rollos en bodega',
+   peligro:'Caída de objetos desde altura (rollos, pallets, cajas)',
+   tipo:'Seguridad',riesgo:'Golpe por caída de material desde estanterías o apilamientos',
+   consecuencia:'Contusión, fractura, lesión grave por aplastamiento',
+   ni:'Alto',mr_i:12,nr:'Medio',mr_r:8,
+   controles:'Sin controles documentados. Sin capacitación en trabajo en bodega.',
+   accion:'Capacitación riesgos bodega URGENTE. Casco en zonas de riesgo. Límite de altura apilamiento.',
+   estado:'CRÍTICO — SIN CONTROLES'},
+
+  {id:11,area:'Logística / Bodega',zona:'bodega',cargo:'Conductor — Ayudante de Bodega',exp:5,
+   actividad:'Acceso a estantes en altura mediante escaleras',
+   peligro:'Caída a distinto nivel desde escalera',
+   tipo:'Seguridad',riesgo:'Caída de altura (≥ 1,5 m)',
+   consecuencia:'Fractura, traumatismo craneoencefálico, muerte',
+   ni:'Alto',mr_i:12,nr:'Medio',mr_r:8,
+   controles:'Sin capacitación en uso seguro de escaleras. Sin EPP verificado.',
+   accion:'Capacitación uso escaleras URGENTE. Escaleras con pie de apoyo y zapatas.',
+   estado:'CRÍTICO — SIN CONTROLES'},
+
+  {id:12,area:'Logística / Bodega',zona:'bodega',cargo:'Conductor — Ayudante de Bodega',exp:5,
+   actividad:'Tránsito peatonal en bodega con equipos de movimiento de carga',
+   peligro:'Atropellamiento / golpe por montacargas, zorra eléctrica',
+   tipo:'Seguridad',riesgo:'Atropellamiento, golpe de equipo de carga',
+   consecuencia:'Lesión grave, amputación, muerte',
+   ni:'Alto',mr_i:12,nr:'Medio',mr_r:6,
+   controles:'Sin demarcación de pasillos. Sin señalética. Sin reglas de tránsito interno.',
+   accion:'Demarcación de pasillos peatonales y de tránsito de equipos. Señalética. Reglas de tránsito interno.',
+   estado:'CRÍTICO — SIN CONTROLES'},
+
+  {id:13,area:'Logística / Bodega',zona:'bodega',cargo:'Conductor — Ayudante de Bodega',exp:5,
+   actividad:'Trabajo en bodega: iluminación y temperatura',
+   peligro:'Condiciones ambientales deficientes (iluminación insuficiente, temperatura extrema)',
+   tipo:'Físico / Ambiental',riesgo:'Accidente por visibilidad reducida; malestar por temperatura',
+   consecuencia:'Lesión por accidente, deshidratación, malestar',
+   ni:'Medio',mr_i:6,nr:'Bajo',mr_r:4,
+   controles:'Sin diagnóstico ambiental.',
+   accion:'Medición de iluminación (mín. 200 lux en bodega). Ventilación. Agua disponible.',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
+
+  {id:14,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
+   actividad:'Operación de máquina rebobinadora',
+   peligro:'Atrapamiento en partes móviles (rodillos, ejes, transmisiones)',
+   tipo:'Mecánico',riesgo:'Atrapamiento de mano o brazo en partes móviles',
+   consecuencia:'Amputación de dedos / mano, lesión grave irreversible',
+   ni:'Crítico',mr_i:15,nr:'Alto',mr_r:10,
+   controles:'Sin guardas documentadas. Sin LOTO verificado.',
+   accion:'Guardas en todos los puntos de atrapamiento URGENTE. Procedimiento LOTO. Botón de parada de emergencia.',
+   estado:'CRÍTICO — SIN CONTROLES'},
+
+  {id:15,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
+   actividad:'Manipulación de rollos de aluminio y PVC (bordes filosos)',
+   peligro:'Corte con bordes de lámina de aluminio o PVC',
+   tipo:'Mecánico',riesgo:'Corte en manos, muñecas o brazos',
+   consecuencia:'Laceración, corte profundo, infección',
+   ni:'Alto',mr_i:12,nr:'Bajo',mr_r:4,
+   controles:'Sin EPP de corte documentado.',
+   accion:'Guantes anticorte nivel 3+ (EN ISO 13997). Capacitación manipulación segura. Procedimiento escrito.',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
+
+  {id:16,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
+   actividad:'Levantamiento y traslado manual de rollos pesados',
+   peligro:'Sobreesfuerzo por manejo manual de cargas',
+   tipo:'Ergonómico',riesgo:'Lesión lumbar aguda, hernia discal',
+   consecuencia:'Incapacidad temporal o permanente',
+   ni:'Alto',mr_i:12,nr:'Medio',mr_r:9,
+   controles:'Sin protocolo de manejo de cargas. Sin ayuda mecánica verificada.',
+   accion:'Protocolo manejo de cargas. Carros portarrollos. Límite de peso (25 kg individual).',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
+
+  {id:17,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
+   actividad:'Operación de rebobinadora con calor (PVC)',
+   peligro:'Peligro químico por PVC — DESCARTADO (proceso sin calor)',
+   tipo:'No aplica',riesgo:'No aplica',
+   consecuencia:'No aplica',
+   ni:'Bajo',mr_i:1,nr:'Bajo',mr_r:1,
+   controles:'Proceso confirmado: sin calor y sin generación de polvo.',
+   accion:'Sin acción requerida. Mantener condición de proceso en frío. Documentar.',
+   estado:'NO APLICA — peligro químico descartado'},
+
+  {id:18,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
+   actividad:'Operación de rebobinadora (jornada completa)',
+   peligro:'Movimientos repetitivos y postura forzada (hombros, muñecas)',
+   tipo:'Ergonómico',riesgo:'Lesión musculoesquelética miembros superiores',
+   consecuencia:'Tendinitis, síndrome del túnel carpiano, enfermedad profesional',
+   ni:'Alto',mr_i:12,nr:'Medio',mr_r:6,
+   controles:'Sin evaluación ergonómica.',
+   accion:'Evaluación ergonómica (OCRA o RULA). Pausas activas. Rotación de tareas. Ajuste de altura.',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
+
+  {id:19,area:'Producción / Rollos',zona:'produccion',cargo:'Operario de Envasado',exp:2,
+   actividad:'Exposición a ruido de la rebobinadora',
+   peligro:'Ruido de maquinaria por sobre 85 dB(A)',
+   tipo:'Físico',riesgo:'Trauma acústico crónico (hipoacusia)',
+   consecuencia:'Pérdida auditiva parcial o total, enfermedad profesional',
+   ni:'Medio',mr_i:9,nr:'Medio',mr_r:6,
+   controles:'Sin medición de ruido. Sin protección auditiva verificada.',
+   accion:'Medición dosimétrica URGENTE. Si supera 82 dB(A): protectores auditivos + programa conservación auditiva (DS N°44/2024).',
+   estado:'Ruido CONFIRMADO. Pendiente medición dosimétrica.'},
+
+  {id:20,area:'Ventas / Comercial / Retail',zona:'ventas',cargo:'Vendedor(a)',exp:7,
+   actividad:'Atención al público en sala de ventas',
+   peligro:'Violencia externa (clientes agresivos, amenazas, robos)',
+   tipo:'Psicosocial',riesgo:'Agresión verbal o física por parte de clientes',
+   consecuencia:'Lesión psicológica, lesión física, estrés postraumático',
+   ni:'Medio',mr_i:9,nr:'Medio',mr_r:6,
+   controles:'Sin protocolo de manejo de violencia externa.',
+   accion:'Protocolo violencia externa (DS N°44 art.10). Capacitación. Botón de pánico si aplica.',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
+
+  {id:21,area:'Ventas / Comercial / Retail',zona:'ventas',cargo:'Vendedor(a)',exp:7,
+   actividad:'Postura de pie prolongada en sala de ventas',
+   peligro:'Postura de pie estática durante toda la jornada',
+   tipo:'Ergonómico',riesgo:'Fatiga, varices, lesión musculoesquelética extremidades inferiores',
+   consecuencia:'Enfermedad profesional, ausentismo',
+   ni:'Medio',mr_i:8,nr:'Medio',mr_r:6,
+   controles:'Sin evaluación ergonómica. Sin silla de descanso verificada (Ley 2951).',
+   accion:'Silla disponible (Ley 2951). Pausas activas. Calzado adecuado. Alfombra anti-fatiga.',
+   estado:'Borrador para validar'},
+
+  {id:22,area:'Ventas / Comercial',zona:'patio',cargo:'Vendedor(a)',exp:4,
+   actividad:'Desplazamiento a clientes en vehículo (visitas comerciales)',
+   peligro:'Accidente de tránsito',
+   tipo:'Seguridad vial',riesgo:'Colisión, vuelco, atropello',
+   consecuencia:'Lesiones graves, muerte',
+   ni:'Crítico',mr_i:15,nr:'Alto',mr_r:10,
+   controles:'Sin protocolo de conducción segura documentado.',
+   accion:'Política de conducción segura. Revisión técnica al día. Prohibición uso celular al conducir.',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
+
+  {id:23,area:'Ventas / Comercial',zona:'ventas',cargo:'Vendedor(a)',exp:4,
+   actividad:'Trabajo en pantalla (cotizaciones, CRM, correo)',
+   peligro:'Fatiga visual, postura sedente prolongada',
+   tipo:'Ergonómico',riesgo:'Fatiga visual, cefalea, lesión musculoesquelética',
+   consecuencia:'Malestar, ausentismo, enfermedad profesional',
+   ni:'Medio',mr_i:6,nr:'Bajo',mr_r:4,
+   controles:'Sin evaluación ergonómica.',
+   accion:'Evaluación ergonómica. Descanso visual (regla 20-20-20). Silla ajustable.',
+   estado:'Borrador para validar'},
+
+  {id:24,area:'Logística / Bodega',zona:'bodega',cargo:'Subjefe de Logística',exp:1,
+   actividad:'Supervisión en bodega y tránsito por zonas de carga',
+   peligro:'Caída de objetos desde altura (pallets, rollos mal estibados)',
+   tipo:'Seguridad',riesgo:'Golpe por caída de material desde estanterías',
+   consecuencia:'Contusión, fractura, lesión grave',
+   ni:'Medio',mr_i:8,nr:'Medio',mr_r:6,
+   controles:'Sin controles documentados.',
+   accion:'Casco en zonas de bodega. Revisión de estanterías. Límite de altura de apilamiento.',
+   estado:'Borrador para validar'},
+
+  {id:25,area:'Logística / Bodega',zona:'bodega',cargo:'Subjefe de Logística',exp:1,
+   actividad:'Tránsito en bodega con equipos de movimiento de carga',
+   peligro:'Atropellamiento / golpe por equipo de carga',
+   tipo:'Seguridad',riesgo:'Golpe por equipo de movimiento de carga',
+   consecuencia:'Lesión grave, amputación, muerte',
+   ni:'Medio',mr_i:8,nr:'Medio',mr_r:6,
+   controles:'Sin demarcación de pasillos.',
+   accion:'Demarcación de pasillos. Chaleco reflectante. Reglas de tránsito interno.',
+   estado:'Borrador para validar'},
+
+  {id:26,area:'Logística / Bodega',zona:'patio',cargo:'Subjefe de Logística',exp:1,
+   actividad:'Desplazamiento a otros centros o clientes',
+   peligro:'Accidente de tránsito',
+   tipo:'Seguridad vial',riesgo:'Colisión, vuelco',
+   consecuencia:'Lesiones graves, muerte',
+   ni:'Alto',mr_i:10,nr:'Medio',mr_r:8,
+   controles:'Sin protocolo de conducción segura documentado.',
+   accion:'Política de conducción segura. Revisión técnica. Prohibición uso celular.',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA'},
+
+  {id:27,area:'Logística / Bodega',zona:'admin',cargo:'Subjefe de Logística',exp:1,
+   actividad:'Trabajo administrativo (planillas, coordinación)',
+   peligro:'Postura sedente prolongada, fatiga visual',
+   tipo:'Ergonómico',riesgo:'Lesión musculoesquelética, cefalea',
+   consecuencia:'Malestar, enfermedad profesional',
+   ni:'Medio',mr_i:6,nr:'Bajo',mr_r:4,
+   controles:'Sin evaluación ergonómica.',
+   accion:'Evaluación ergonómica. Pausas activas. Silla regulable.',
+   estado:'Borrador para validar'},
+
+  {id:28,area:'Logística Regional (CCP Concepción)',zona:'ccp',cargo:'Encargado de Logística Sur',exp:1,
+   actividad:'Desplazamiento regional (interurbano) en vehículo',
+   peligro:'Accidente de tránsito en ruta interurbana',
+   tipo:'Seguridad vial',riesgo:'Colisión, vuelco, atropello en ruta',
+   consecuencia:'Lesiones graves, muerte',
+   ni:'Crítico',mr_i:15,nr:'Alto',mr_r:10,
+   controles:'Sin protocolo de conducción segura. Sin política de fatiga.',
+   accion:'Política conducción segura. Máx. 5 h continuas. Seguro accidentes. Check-list vehículo.',
+   estado:'CRÍTICO — SIN CONTROLES'},
+
+  {id:29,area:'Logística Regional (CCP Concepción)',zona:'ccp',cargo:'Encargado de Logística Sur',exp:1,
+   actividad:'Coordinación y supervisión en bodega CCP',
+   peligro:'Peligros en bodega CCP — condiciones no auditadas',
+   tipo:'Seguridad',riesgo:'Caída de objetos, golpe, caída al mismo nivel',
+   consecuencia:'Contusión, fractura, lesión moderada a grave',
+   ni:'Medio',mr_i:6,nr:'Medio',mr_r:6,
+   controles:'Sin controles documentados. Condiciones de CCP no auditadas.',
+   accion:'Visita de diagnóstico al centro CCP. Levantar MIPER específica. Mientras: EPP básico.',
+   estado:'REQUIERE VALIDACIÓN TÉCNICA — SITIO NO AUDITADO'},
+
+  {id:30,area:'Logística Regional (CCP Concepción)',zona:'ccp',cargo:'Encargado de Logística Sur',exp:1,
+   actividad:'Carga manual esporádica de materiales',
+   peligro:'Sobreesfuerzo por manejo manual de cargas',
+   tipo:'Ergonómico',riesgo:'Lesión lumbar',
+   consecuencia:'Lumbago, incapacidad temporal',
+   ni:'Medio',mr_i:6,nr:'Bajo',mr_r:4,
+   controles:'Sin protocolo documentado.',
+   accion:'Protocolo manejo manual de cargas. Ayuda mecánica si disponible.',
+   estado:'Borrador para validar'},
+];
+
+function nivelBadgeClass(nivel){
+  if(nivel==='Crítico') return 'nb-critico';
+  if(nivel==='Alto') return 'nb-alto';
+  if(nivel==='Medio') return 'nb-medio';
+  return 'nb-bajo';
+}
+function nivelChipClass(nivel){
+  if(nivel==='Crítico') return 'nc-critico';
+  if(nivel==='Alto') return 'nc-alto';
+  if(nivel==='Medio') return 'nc-medio';
+  return 'nc-bajo';
+}
+function nivelColor(nivel){
+  if(nivel==='Crítico') return '#c0392b';
+  if(nivel==='Alto') return '#e67e22';
+  if(nivel==='Medio') return '#d4ac0d';
+  return '#27ae60';
+}
+
+function renderTabla(filtroNivel){
+  const tbody = document.getElementById('tabla-body');
+  tbody.innerHTML = '';
+  riesgos.forEach(r => {
+    if(filtroNivel !== 'todos' && r.ni !== filtroNivel) return;
+    const tr = document.createElement('tr');
+    const esRojo = r.estado.includes('CRÍTICO') || r.estado.includes('REQUIERE VALIDACIÓN') || r.estado.includes('NO AUDITADO');
+    tr.innerHTML = `
+      <td style="font-weight:700">${r.id}</td>
+      <td>${r.area}</td>
+      <td>${r.cargo} <small style="color:#888">(${r.exp})</small></td>
+      <td>${r.actividad}</td>
+      <td>${r.peligro}</td>
+      <td><span style="background:#eef0f3;padding:1px 5px;border-radius:3px;font-size:10px">${r.tipo}</span></td>
+      <td>${r.riesgo}</td>
+      <td style="font-size:10px;color:#666">${r.consecuencia}</td>
+      <td class="nivel-cell"><span class="nivel-badge ${nivelBadgeClass(r.ni)}">${r.ni}</span><div style="font-size:9px;color:#888;margin-top:2px">MR ${r.mr_i}</div></td>
+      <td class="nivel-cell"><span class="nivel-badge ${nivelBadgeClass(r.nr)}">${r.nr}</span><div style="font-size:9px;color:#888;margin-top:2px">MR ${r.mr_r}</div></td>
+      <td style="font-size:10px;color:#555">${r.controles}</td>
+      <td style="font-size:10px;color:#1a6dad">${r.accion}</td>
+      <td class="${esRojo ? 'observ-rojo' : 'observ-normal'}">${r.estado}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function filtrar(nivel, btn){
+  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTabla(nivel);
+}
+
+const zonaNames = {
+  patio:'&#x1F6A7; Patio de Carga / Acceso / Vía Pública',
+  bodega:'&#x1F4E6; Bodega / Almacenamiento',
+  produccion:'&#x2699;&#xFE0F; Producción / Envasado',
+  aseo:'&#x1F9F9; Aseo y Limpieza',
+  ventas:'&#x1F6D2; Sala de Ventas / Retail',
+  admin:'&#x1F5A5;&#xFE0F; Administración / RRHH',
+  ccp:'&#x1F4CD; CCP Concepción (sitio no auditado)',
+};
+
+function mostrarZona(zona){
+  const panel = document.getElementById('zona-detail');
+  const risks = riesgos.filter(r => r.zona === zona);
+  if(!risks.length) return;
+  let html = `<h2>${zonaNames[zona]}</h2>`;
+  risks.forEach(r => {
+    const clr = nivelColor(r.ni);
+    const cls = nivelChipClass(r.ni);
+    html += `
+      <div class="risk-card" style="border-left-color:${clr}">
+        <div class="risk-num">Riesgo #${r.id} — ${r.tipo}</div>
+        <div class="risk-title">${r.peligro}<span class="nivel-chip ${cls}">${r.ni} MR${r.mr_i}</span></div>
+        <div class="risk-meta">&#x1F477; ${r.cargo} (${r.exp} exp.) | ${r.actividad}<br>&#x26A1; ${r.riesgo}<br>&#x1F915; ${r.consecuencia}</div>
+        <div class="risk-control">&#x26A0; ${r.controles}</div>
+        <div class="risk-action">&#x2713; ${r.accion}</div>
+      </div>`;
+  });
+  panel.innerHTML = html;
+  document.querySelectorAll('.zona').forEach(z => z.classList.remove('selected'));
+  const el = document.querySelector(`.zona[data-zona="${zona}"]`);
+  if(el) el.classList.add('selected');
+}
+
+document.querySelectorAll('.zona').forEach(zona => {
+  zona.addEventListener('click', function(){ mostrarZona(this.dataset.zona); });
+  zona.addEventListener('mouseenter', function(e){
+    const z = this.dataset.zona;
+    const risks = riesgos.filter(r => r.zona === z);
+    const cr = risks.filter(r => r.ni === 'Crítico').length;
+    const al = risks.filter(r => r.ni === 'Alto').length;
+    const tt = document.getElementById('tooltip');
+    tt.innerHTML = `<strong>${zonaNames[z]}</strong><br>${risks.length} riesgos | ${cr} críticos | ${al} altos`;
+    tt.style.display = 'block';
+  });
+  zona.addEventListener('mousemove', function(e){
+    const tt = document.getElementById('tooltip');
+    tt.style.left = (e.clientX + 14) + 'px';
+    tt.style.top = (e.clientY + 14) + 'px';
+  });
+  zona.addEventListener('mouseleave', function(){ document.getElementById('tooltip').style.display = 'none'; });
+});
+
+renderTabla('todos');
+mostrarZona('bodega');
+</script>
+</body>
+</html>
